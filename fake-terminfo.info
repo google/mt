@@ -1,4 +1,11 @@
-st| simpleterm,
+# These are terminfo definitions that can be used if your system doesn't have
+# one, or if the one on your system doesn't support the desired features.
+#
+# Note that the 'mt' terminal purports to be compatible with 'xterm' and uses
+# that name in its 'TERM' environment variable. As a consequence, the name here
+# matches that one. If you actually use 'xterm' you may not want to replace
+# your terminfo with this.
+xterm-256color| Generic terminfo settings that are largely xterm compatible.
 	acsc=+C\,D-A.B0E``aaffgghFiGjjkkllmmnnooppqqrrssttuuvvwwxxyyzz{{||}}~~,
 	am,
 	bce,
@@ -10,7 +17,11 @@ st| simpleterm,
 	civis=\E[?25l,
 	clear=\E[H\E[2J,
 	cnorm=\E[?12l\E[?25h,
-	colors#8,
+	colors#256,
+	pairs#32767,
+#	Nicked from xterm-256color
+	setab=\E[%?%p1%{8}%<%t4%p1%d%e%p1%{16}%<%t10%p1%{8}%-%d%e48;5;%p1%d%;m,
+	setaf=\E[%?%p1%{8}%<%t3%p1%d%e%p1%{16}%<%t9%p1%{8}%-%d%e38;5;%p1%d%;m,
 	cols#80,
 	cr=^M,
 	csr=\E[%i%p1%d;%p2%dr,
@@ -191,26 +202,12 @@ st| simpleterm,
 	Tc,
 	Ms=\E]52;%p1%s;%p2%s\007,
 
-st-256color| simpleterm with 256 colors,
-	use=st,
-	colors#256,
-	pairs#32767,
-#	Nicked from xterm-256color
-	setab=\E[%?%p1%{8}%<%t4%p1%d%e%p1%{16}%<%t10%p1%{8}%-%d%e48;5;%p1%d%;m,
-	setaf=\E[%?%p1%{8}%<%t3%p1%d%e%p1%{16}%<%t9%p1%{8}%-%d%e38;5;%p1%d%;m,
-
-st-meta| simpleterm with meta key,
-	use=st,
-	km,
-	rmm=\E[?1034l,
-	smm=\E[?1034h,
-	rs2=\E[4l\E>\E[?1034h,
-	is2=\E[4l\E>\E[?1034h,
-
-st-meta-256color| simpleterm with meta key and 256 colors,
-	use=st-256color,
-	km,
-	rmm=\E[?1034l,
-	smm=\E[?1034h,
-	rs2=\E[4l\E>\E[?1034h,
-	is2=\E[4l\E>\E[?1034h,
+# FIXME: Consider if we want to add this -- these provide the meta key, based
+# on what the 'st' terminal does.
+#xterm-256color-meta| Generic terminfo settings that are largely xterm compatible with a meta key.
+#	use=xterm-256color,
+#	km,
+#	rmm=\E[?1034l,
+#	smm=\E[?1034h,
+#	rs2=\E[4l\E>\E[?1034h,
+#	is2=\E[4l\E>\E[?1034h,
