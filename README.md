@@ -118,6 +118,10 @@ If you are using zsh, then read the zsh FAQ
 
 Putting these lines into your .zshrc will fix the problems.
 
+# Disclaimer
+
+This is not an official Google product.
+
 # Credits
 
 This is based on the `st` terminal, but doesn't share the same goals or
