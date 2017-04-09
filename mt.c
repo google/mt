@@ -34,7 +34,7 @@ char *argv0;
 #define Font Font_
 
 #include "win.h"
-#include "st.h"
+#include "mt.h"
 
 #if   defined(__linux)
  #include <pty.h>

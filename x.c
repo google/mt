@@ -21,7 +21,7 @@
 #define Font Font_
 
 #include "win.h"
-#include "st.h"
+#include "mt.h"
 
 /* XEMBED messages */
 #define XEMBED_FOCUS_IN  4
