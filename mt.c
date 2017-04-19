@@ -2606,7 +2606,7 @@ zoomreset(const Arg *arg)
 void
 resettitle(void)
 {
-	xsettitle(opt_title ? opt_title : "st");
+	xsettitle(opt_title ? opt_title : "mt");
 }
 
 void
