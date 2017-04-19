@@ -5,8 +5,6 @@
 #define XK_NO_MOD 0
 #define XK_SWITCH_MOD (1 << 13)
 
-typedef XftGlyphFontSpec GlyphFontSpec;
-
 void draw(void);
 void drawregion(int, int, int, int);
 void run(void);

@@ -2302,7 +2302,7 @@ void tresize(int col, int row) {
   }
 
   /* resize to new width */
-  term.specbuf = xrealloc(term.specbuf, col * sizeof(GlyphFontSpec));
+  term.specbuf = xrealloc(term.specbuf, col * sizeof(XftGlyphFontSpec));
 
   /* resize to new height */
   term.line = xrealloc(term.line, row * sizeof(Line));

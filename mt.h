@@ -102,7 +102,7 @@ typedef struct {
   Line *line;             /* screen */
   Line *alt;              /* alternate screen */
   int *dirty;             /* dirtyness of lines */
-  GlyphFontSpec *specbuf; /* font spec buffer used for rendering */
+  XftGlyphFontSpec *specbuf; /* font spec buffer used for rendering */
   TCursor c;              /* cursor */
   int top;                /* top    scroll limit */
   int bot;                /* bottom scroll limit */
