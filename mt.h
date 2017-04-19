@@ -1,24 +1,24 @@
 /* See LICENSE for license details. */
 
 /* Arbitrary sizes */
-#define UTF_SIZ       4
+#define UTF_SIZ 4
 
 /* macros */
-#define MIN(a, b)		((a) < (b) ? (a) : (b))
-#define MAX(a, b)		((a) < (b) ? (b) : (a))
-#define LEN(a)			(sizeof(a) / sizeof(a)[0])
-#define BETWEEN(x, a, b)	((a) <= (x) && (x) <= (b))
-#define DIVCEIL(n, d)		(((n) + ((d) - 1)) / (d))
-#define LIMIT(x, a, b)		(x) = (x) < (a) ? (a) : (x) > (b) ? (b) : (x)
-#define ATTRCMP(a, b)		((a).mode != (b).mode || (a).fg != (b).fg || \
-				(a).bg != (b).bg)
-#define IS_SET(flag)		((term.mode & (flag)) != 0)
-#define TIMEDIFF(t1, t2)	((t1.tv_sec-t2.tv_sec)*1000 + \
-				(t1.tv_nsec-t2.tv_nsec)/1E6)
-#define MODBIT(x, set, bit)	((set) ? ((x) |= (bit)) : ((x) &= ~(bit)))
+#define MIN(a, b) ((a) < (b) ? (a) : (b))
+#define MAX(a, b) ((a) < (b) ? (b) : (a))
+#define LEN(a) (sizeof(a) / sizeof(a)[0])
+#define BETWEEN(x, a, b) ((a) <= (x) && (x) <= (b))
+#define DIVCEIL(n, d) (((n) + ((d)-1)) / (d))
+#define LIMIT(x, a, b) (x) = (x) < (a) ? (a) : (x) > (b) ? (b) : (x)
+#define ATTRCMP(a, b)                                                          \
+  ((a).mode != (b).mode || (a).fg != (b).fg || (a).bg != (b).bg)
+#define IS_SET(flag) ((term.mode & (flag)) != 0)
+#define TIMEDIFF(t1, t2)                                                       \
+  ((t1.tv_sec - t2.tv_sec) * 1000 + (t1.tv_nsec - t2.tv_nsec) / 1E6)
+#define MODBIT(x, set, bit) ((set) ? ((x) |= (bit)) : ((x) &= ~(bit)))
 
-#define TRUECOLOR(r,g,b)	(1 << 24 | (r) << 16 | (g) << 8 | (b))
-#define IS_TRUECOL(x)		(1 << 24 & (x))
+#define TRUECOLOR(r, g, b) (1 << 24 | (r) << 16 | (g) << 8 | (b))
+#define IS_TRUECOL(x) (1 << 24 & (x))
 
 enum glyph_attribute {
 	ATTR_NULL       = 0,
@@ -64,26 +64,13 @@ enum term_mode {
 	                  |MODE_MOUSEMANY,
 };
 
-enum selection_mode {
-	SEL_IDLE = 0,
-	SEL_EMPTY = 1,
-	SEL_READY = 2
-};
+enum selection_mode { SEL_IDLE = 0, SEL_EMPTY = 1, SEL_READY = 2 };
 
-enum selection_type {
-	SEL_REGULAR = 1,
-	SEL_RECTANGULAR = 2
-};
+enum selection_type { SEL_REGULAR = 1, SEL_RECTANGULAR = 2 };
 
-enum selection_snap {
-	SNAP_WORD = 1,
-	SNAP_LINE = 2
-};
+enum selection_snap { SNAP_WORD = 1, SNAP_LINE = 2 };
 
-enum window_state {
-	WIN_VISIBLE = 1,
-	WIN_FOCUSED = 2
-};
+enum window_state { WIN_VISIBLE = 1, WIN_FOCUSED = 2 };
 
 typedef unsigned char uchar;
 typedef unsigned int uint;
@@ -93,92 +80,92 @@ typedef unsigned short ushort;
 typedef uint_least32_t Rune;
 
 typedef struct {
-	Rune u;           /* character code */
-	ushort mode;      /* attribute flags */
-	uint32_t fg;      /* foreground  */
-	uint32_t bg;      /* background  */
+  Rune u;      /* character code */
+  ushort mode; /* attribute flags */
+  uint32_t fg; /* foreground  */
+  uint32_t bg; /* background  */
 } Glyph;
 
 typedef Glyph *Line;
 
 typedef struct {
-	Glyph attr; /* current char attributes */
-	int x;
-	int y;
-	char state;
+  Glyph attr; /* current char attributes */
+  int x;
+  int y;
+  char state;
 } TCursor;
 
 /* Internal representation of the screen */
 typedef struct {
-	int row;      /* nb row */
-	int col;      /* nb col */
-	Line *line;   /* screen */
-	Line *alt;    /* alternate screen */
-	int *dirty;  /* dirtyness of lines */
-	GlyphFontSpec *specbuf; /* font spec buffer used for rendering */
-	TCursor c;    /* cursor */
-	int top;      /* top    scroll limit */
-	int bot;      /* bottom scroll limit */
-	int mode;     /* terminal mode flags */
-	int esc;      /* escape state flags */
-	char trantbl[4]; /* charset table translation */
-	int charset;  /* current charset */
-	int icharset; /* selected charset for sequence */
-	int numlock; /* lock numbers in keyboard */
-	int *tabs;
+  int row;                /* nb row */
+  int col;                /* nb col */
+  Line *line;             /* screen */
+  Line *alt;              /* alternate screen */
+  int *dirty;             /* dirtyness of lines */
+  GlyphFontSpec *specbuf; /* font spec buffer used for rendering */
+  TCursor c;              /* cursor */
+  int top;                /* top    scroll limit */
+  int bot;                /* bottom scroll limit */
+  int mode;               /* terminal mode flags */
+  int esc;                /* escape state flags */
+  char trantbl[4];        /* charset table translation */
+  int charset;            /* current charset */
+  int icharset;           /* selected charset for sequence */
+  int numlock;            /* lock numbers in keyboard */
+  int *tabs;
 } Term;
 
 /* Purely graphic info */
 typedef struct {
-	int tw, th; /* tty width and height */
-	int w, h; /* window width and height */
-	int ch; /* char height */
-	int cw; /* char width  */
-	char state; /* focus, redraw, visible */
-	int cursor; /* cursor style */
+  int tw, th; /* tty width and height */
+  int w, h;   /* window width and height */
+  int ch;     /* char height */
+  int cw;     /* char width  */
+  char state; /* focus, redraw, visible */
+  int cursor; /* cursor style */
 } TermWindow;
 
 typedef struct {
-	uint b;
-	uint mask;
-	char *s;
+  uint b;
+  uint mask;
+  char *s;
 } MouseShortcut;
 
 typedef struct {
-	int mode;
-	int type;
-	int snap;
-	/*
-	 * Selection variables:
-	 * nb – normalized coordinates of the beginning of the selection
-	 * ne – normalized coordinates of the end of the selection
-	 * ob – original coordinates of the beginning of the selection
-	 * oe – original coordinates of the end of the selection
-	 */
-	struct {
-		int x, y;
-	} nb, ne, ob, oe;
+  int mode;
+  int type;
+  int snap;
+  /*
+   * Selection variables:
+   * nb – normalized coordinates of the beginning of the selection
+   * ne – normalized coordinates of the end of the selection
+   * ob – original coordinates of the beginning of the selection
+   * oe – original coordinates of the end of the selection
+   */
+  struct {
+    int x, y;
+  } nb, ne, ob, oe;
 
-	char *primary, *clipboard;
-	int alt;
-	struct timespec tclick1;
-	struct timespec tclick2;
+  char *primary, *clipboard;
+  int alt;
+  struct timespec tclick1;
+  struct timespec tclick2;
 
-	//Atom xtarget;
+  // Atom xtarget;
 } Selection;
 
 typedef union {
-	int i;
-	uint ui;
-	float f;
-	const void *v;
+  int i;
+  uint ui;
+  float f;
+  const void *v;
 } Arg;
 
 typedef struct {
-	uint mod;
-	KeySym keysym;
-	void (*func)(const Arg *);
-	const Arg arg;
+  uint mod;
+  KeySym keysym;
+  void (*func)(const Arg *);
+  const Arg arg;
 } Shortcut;
 
 void die(const char *, ...);

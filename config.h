@@ -84,33 +84,18 @@ static unsigned int tabspaces = 8;
 
 /* Terminal colors (16 first used in escape sequence) */
 const char *colorname[] = {
-	/* 8 normal colors */
-	"black",
-	"red3",
-	"green3",
-	"yellow3",
-	"blue2",
-	"magenta3",
-	"cyan3",
-	"gray90",
+    /* 8 normal colors */
+    "black", "red3", "green3", "yellow3", "blue2", "magenta3", "cyan3",
+    "gray90",
 
-	/* 8 bright colors */
-	"gray50",
-	"red",
-	"green",
-	"yellow",
-	"#5c5cff",
-	"magenta",
-	"cyan",
-	"white",
+    /* 8 bright colors */
+    "gray50", "red", "green", "yellow", "#5c5cff", "magenta", "cyan", "white",
 
-	[255] = 0,
+    [255] = 0,
 
-	/* more colors can be added after 255 to use with DefaultXX */
-	"#cccccc",
-	"#555555",
+    /* more colors can be added after 255 to use with DefaultXX */
+    "#cccccc", "#555555",
 };
-
 
 /*
  * Default colors (colorname index)
@@ -162,7 +147,7 @@ MouseShortcut mshortcuts[] = {
 
 /* Internal keyboard shortcuts. */
 #define MODKEY Mod1Mask
-#define TERMMOD (ControlMask|ShiftMask)
+#define TERMMOD (ControlMask | ShiftMask)
 
 Shortcut shortcuts[] = {
 	/* mask                 keysym          function        argument */
@@ -209,13 +194,13 @@ Shortcut shortcuts[] = {
  * If you want keys other than the X11 function keys (0xFD00 - 0xFFFF)
  * to be mapped below, add them to this array.
  */
-static KeySym mappedkeys[] = { -1 };
+static KeySym mappedkeys[] = {-1};
 
 /*
  * State bits to ignore when matching key or button events.  By default,
  * numlock (Mod2Mask) and keyboard layout (XK_SWITCH_MOD) are ignored.
  */
-static uint ignoremod = Mod2Mask|XK_SWITCH_MOD;
+static uint ignoremod = Mod2Mask | XK_SWITCH_MOD;
 
 /*
  * Override mouse-select while mask is active (when MODE_MOUSE is set).
@@ -452,15 +437,14 @@ static Key key[] = {
  * If no match is found, regular selection is used.
  */
 uint selmasks[] = {
-	[SEL_RECTANGULAR] = Mod1Mask,
+        [SEL_RECTANGULAR] = Mod1Mask,
 };
 
 /*
  * Printable characters in ASCII, used to estimate the advance width
  * of single wide characters.
  */
-char ascii_printable[] =
-	" !\"#$%&'()*+,-./0123456789:;<=>?"
-	"@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_"
-	"`abcdefghijklmnopqrstuvwxyz{|}~";
+char ascii_printable[] = " !\"#$%&'()*+,-./0123456789:;<=>?"
+                         "@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_"
+                         "`abcdefghijklmnopqrstuvwxyz{|}~";
 
