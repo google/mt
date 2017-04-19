@@ -1,4 +1,7 @@
 /* See LICENSE for license details. */
+
+#include "mt.h"
+
 #include <ctype.h>
 #include <errno.h>
 #include <fcntl.h>
@@ -24,13 +27,11 @@
 #include <unistd.h>
 #include <wchar.h>
 
-/* X11 */
 #include <X11/Xft/Xft.h>
 #include <X11/cursorfont.h>
 
 char *argv0;
 
-#include "mt.h"
 #include "x.h"
 
 #if defined(__linux)

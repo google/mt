@@ -1,5 +1,11 @@
 /* See LICENSE for license details. */
 
+#include <stddef.h>
+#include <stdint.h>
+#include <time.h>
+
+#include <X11/Xft/Xft.h>
+
 /* Arbitrary sizes */
 #define UTF_SIZ 4
 
