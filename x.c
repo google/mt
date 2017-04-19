@@ -109,29 +109,29 @@ static void getbuttoninfo(XEvent *);
 static void mousereport(XEvent *);
 
 static void (*handler[LASTEvent])(XEvent *) = {
-	[KeyPress] = kpress,
-	[ClientMessage] = cmessage,
-	[ConfigureNotify] = resize,
-	[VisibilityNotify] = visibility,
-	[UnmapNotify] = unmap,
-	[Expose] = expose,
-	[FocusIn] = focus,
-	[FocusOut] = focus,
-	[MotionNotify] = bmotion,
-	[ButtonPress] = bpress,
-	[ButtonRelease] = brelease,
-/*
- * Uncomment if you want the selection to disappear when you select something
- * different in another window.
- */
-/*	[SelectionClear] = selclear_, */
-	[SelectionNotify] = selnotify,
-/*
- * PropertyNotify is only turned on when there is some INCR transfer happening
- * for the selection retrieval.
- */
-	[PropertyNotify] = propnotify,
-	[SelectionRequest] = selrequest,
+  [KeyPress] = kpress,
+  [ClientMessage] = cmessage,
+  [ConfigureNotify] = resize,
+  [VisibilityNotify] = visibility,
+  [UnmapNotify] = unmap,
+  [Expose] = expose,
+  [FocusIn] = focus,
+  [FocusOut] = focus,
+  [MotionNotify] = bmotion,
+  [ButtonPress] = bpress,
+  [ButtonRelease] = brelease,
+  /*
+   * Uncomment if you want the selection to disappear when you select something
+   * different in another window.
+   */
+  /*  [SelectionClear] = selclear_, */
+  [SelectionNotify] = selnotify,
+  /*
+   * PropertyNotify is only turned on when there is some INCR transfer happening
+   * for the selection retrieval.
+   */
+  [PropertyNotify] = propnotify,
+  [SelectionRequest] = selrequest,
 };
 
 /* Globals */
