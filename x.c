@@ -1,4 +1,7 @@
 /* See LICENSE for license details. */
+
+#include "x.h"
+
 #include <X11/XKBlib.h>
 #include <X11/Xatom.h>
 #include <X11/Xft/Xft.h>
@@ -20,7 +23,6 @@
 #define Glyph Glyph_
 #define Font Font_
 
-#include "x.h"
 #include "mt.h"
 
 /* XEMBED messages */

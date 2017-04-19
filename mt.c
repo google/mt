@@ -33,8 +33,8 @@ char *argv0;
 #define Glyph Glyph_
 #define Font Font_
 
-#include "x.h"
 #include "mt.h"
+#include "x.h"
 
 #if defined(__linux)
 #include <pty.h>
