@@ -20,7 +20,7 @@
 #define Glyph Glyph_
 #define Font Font_
 
-#include "win.h"
+#include "x.h"
 #include "mt.h"
 
 /* XEMBED messages */
