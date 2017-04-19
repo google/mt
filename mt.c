@@ -28,10 +28,6 @@
 #include <X11/Xft/Xft.h>
 #include <X11/cursorfont.h>
 
-char *argv0;
-
-#include "x.h"
-
 #if defined(__linux)
 #include <pty.h>
 #elif defined(__OpenBSD__) || defined(__NetBSD__) || defined(__APPLE__)
@@ -39,6 +35,10 @@ char *argv0;
 #elif defined(__FreeBSD__) || defined(__DragonFly__)
 #include <libutil.h>
 #endif
+
+#include "x.h"
+
+char *argv0;
 
 /* Arbitrary sizes */
 #define UTF_INVALID 0xFFFD
