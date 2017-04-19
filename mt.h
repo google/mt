@@ -1,5 +1,3 @@
-/* See LICENSE for license details. */
-
 #ifndef MT_MT_H
 #define MT_MT_H
 

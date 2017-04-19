@@ -1,5 +1,3 @@
-/* See LICENSE for license details. */
-
 #include "x.h"
 
 #include <X11/XKBlib.h>

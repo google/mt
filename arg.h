@@ -1,8 +1,3 @@
-/*
- * Copy me if you can.
- * by 20h
- */
-
 #ifndef MT_ARG_H
 #define MT_ARG_H
 

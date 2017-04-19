@@ -1,5 +1,3 @@
-/* See LICENSE for license details. */
-
 #include "mt.h"
 
 #include <ctype.h>
