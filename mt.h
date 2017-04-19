@@ -1,5 +1,8 @@
 /* See LICENSE for license details. */
 
+#ifndef MT_MT_H
+#define MT_MT_H
+
 #include <stddef.h>
 #include <stdint.h>
 #include <time.h>
@@ -263,3 +266,5 @@ extern uint forceselmod;
 extern uint selmasks[];
 extern size_t selmaskslen;
 extern char ascii_printable[];
+
+#endif

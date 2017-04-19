@@ -1,5 +1,8 @@
 /* See LICENSE for license details. */
 
+#ifndef MT_X_H
+#define MT_X_H
+
 #include <X11/Xlib.h>
 
 /* X modifiers */
@@ -28,3 +31,5 @@ void xresize(int, int);
 void xselpaste(void);
 unsigned long xwinid(void);
 void xsetsel(char *, Time);
+
+#endif
