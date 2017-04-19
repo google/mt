@@ -84,12 +84,12 @@ typedef struct {
   ushort mode; /* attribute flags */
   uint32_t fg; /* foreground  */
   uint32_t bg; /* background  */
-} Glyph;
+} MTGlyph;
 
-typedef Glyph *Line;
+typedef MTGlyph *Line;
 
 typedef struct {
-  Glyph attr; /* current char attributes */
+  MTGlyph attr; /* current char attributes */
   int x;
   int y;
   char state;

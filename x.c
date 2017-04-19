@@ -19,10 +19,6 @@
 #include <unistd.h>
 
 #include "arg.h"
-
-#define Glyph Glyph_
-#define Font Font_
-
 #include "mt.h"
 
 /* XEMBED messages */
@@ -57,7 +53,7 @@ typedef struct {
 
 typedef struct { Atom xtarget; } XSelection;
 
-/* Font structure */
+/* MTFont structure */
 typedef struct {
   int height;
   int width;
@@ -70,26 +66,26 @@ typedef struct {
   XftFont *match;
   FcFontSet *set;
   FcPattern *pattern;
-} Font;
+} MTFont;
 
 /* Drawing Context */
 typedef struct {
   Color *col;
   size_t collen;
-  Font font, bfont, ifont, ibfont;
+  MTFont font, bfont, ifont, ibfont;
   GC gc;
 } DC;
 
 static inline ushort sixd_to_16bit(int);
-static int xmakeglyphfontspecs(XftGlyphFontSpec *, const Glyph *, int, int,
+static int xmakeglyphfontspecs(XftGlyphFontSpec *, const MTGlyph *, int, int,
                                int);
-static void xdrawglyphfontspecs(const XftGlyphFontSpec *, Glyph, int, int, int);
-static void xdrawglyph(Glyph, int, int);
+static void xdrawglyphfontspecs(const XftGlyphFontSpec *, MTGlyph, int, int, int);
+static void xdrawglyph(MTGlyph, int, int);
 static void xclear(int, int, int, int);
 static void xdrawcursor(void);
 static int xgeommasktogravity(int);
-static int xloadfont(Font *, FcPattern *);
-static void xunloadfont(Font *);
+static int xloadfont(MTFont *, FcPattern *);
+static void xunloadfont(MTFont *);
 
 static void expose(XEvent *);
 static void visibility(XEvent *);
@@ -141,7 +137,7 @@ static DC dc;
 static XWindow xw;
 static XSelection xsel;
 
-/* Font Ring Cache */
+/* MTFont Ring Cache */
 enum { FRC_NORMAL, FRC_ITALIC, FRC_BOLD, FRC_ITALICBOLD };
 
 typedef struct {
@@ -630,7 +626,7 @@ int xgeommasktogravity(int mask) {
   return SouthEastGravity;
 }
 
-int xloadfont(Font *f, FcPattern *pattern) {
+int xloadfont(MTFont *f, FcPattern *pattern) {
   FcPattern *configured;
   FcPattern *match;
   FcResult result;
@@ -771,7 +767,7 @@ void xloadfonts(char *fontstr, double fontsize) {
   FcPatternDestroy(pattern);
 }
 
-void xunloadfont(Font *f) {
+void xunloadfont(MTFont *f) {
   XftFontClose(xw.dpy, f->match);
   FcPatternDestroy(f->pattern);
   if (f->set)
@@ -901,11 +897,11 @@ void xinit(void) {
     xsel.xtarget = XA_STRING;
 }
 
-int xmakeglyphfontspecs(XftGlyphFontSpec *specs, const Glyph *glyphs, int len,
+int xmakeglyphfontspecs(XftGlyphFontSpec *specs, const MTGlyph *glyphs, int len,
                         int x, int y) {
   float winx = borderpx + x * win.cw, winy = borderpx + y * win.ch, xp, yp;
   ushort mode, prevmode = USHRT_MAX;
-  Font *font = &dc.font;
+  MTFont *font = &dc.font;
   int frcflags = FRC_NORMAL;
   float runewidth = win.cw;
   Rune rune;
@@ -1026,7 +1022,7 @@ int xmakeglyphfontspecs(XftGlyphFontSpec *specs, const Glyph *glyphs, int len,
   return numspecs;
 }
 
-void xdrawglyphfontspecs(const XftGlyphFontSpec *specs, Glyph base, int len,
+void xdrawglyphfontspecs(const XftGlyphFontSpec *specs, MTGlyph base, int len,
                          int x, int y) {
   int charlen = len * ((base.mode & ATTR_WIDE) ? 2 : 1);
   int winx = borderpx + x * win.cw, winy = borderpx + y * win.ch,
@@ -1154,7 +1150,7 @@ void xdrawglyphfontspecs(const XftGlyphFontSpec *specs, Glyph base, int len,
   XftDrawSetClip(xw.draw, 0);
 }
 
-void xdrawglyph(Glyph g, int x, int y) {
+void xdrawglyph(MTGlyph g, int x, int y) {
   int numspecs;
   XftGlyphFontSpec spec;
 
@@ -1165,7 +1161,7 @@ void xdrawglyph(Glyph g, int x, int y) {
 void xdrawcursor(void) {
   static int oldx = 0, oldy = 0;
   int curx;
-  Glyph g = {' ', ATTR_NULL, defaultbg, defaultcs}, og;
+  MTGlyph g = {' ', ATTR_NULL, defaultbg, defaultcs}, og;
   int ena_sel = sel.ob.x != -1 && sel.alt == IS_SET(MODE_ALTSCREEN);
   Color drawcol;
 
@@ -1277,7 +1273,7 @@ void draw(void) {
 
 void drawregion(int x1, int y1, int x2, int y2) {
   int i, x, y, ox, numspecs;
-  Glyph base, new;
+  MTGlyph base, new;
   XftGlyphFontSpec *specs;
   int ena_sel = sel.ob.x != -1 && sel.alt == IS_SET(MODE_ALTSCREEN);
 

@@ -30,9 +30,6 @@
 
 char *argv0;
 
-#define Glyph Glyph_
-#define Font Font_
-
 #include "mt.h"
 #include "x.h"
 
@@ -174,7 +171,7 @@ static void tresize(int, int);
 static void tscrollup(int, int);
 static void tscrolldown(int, int);
 static void tsetattr(int *, int);
-static void tsetchar(Rune, Glyph *, int, int);
+static void tsetchar(Rune, MTGlyph *, int, int);
 static void tsetscroll(int, int);
 static void tswapscreen(void);
 static void tsetmode(int, int, int *, int);
@@ -463,7 +460,7 @@ int selected(int x, int y) {
 void selsnap(int *x, int *y, int direction) {
   int newx, newy, xt, yt;
   int delim, prevdelim;
-  Glyph *gp, *prevgp;
+  MTGlyph *gp, *prevgp;
 
   switch (sel.snap) {
   case SNAP_WORD:
@@ -532,7 +529,7 @@ void selsnap(int *x, int *y, int direction) {
 char *getsel(void) {
   char *str, *ptr;
   int y, bufsize, lastx, linelen;
-  Glyph *gp, *last;
+  MTGlyph *gp, *last;
 
   if (sel.ob.x == -1)
     return NULL;
@@ -1077,7 +1074,7 @@ void tmoveto(int x, int y) {
   term.c.y = LIMIT(y, miny, maxy);
 }
 
-void tsetchar(Rune u, Glyph *attr, int x, int y) {
+void tsetchar(Rune u, MTGlyph *attr, int x, int y) {
   static char *vt100_0[62] = {
       /* 0x41 - 0x7e */
       "↑", "↓", "→", "←", "█", "▚", "☃",      /* A - G */
@@ -1114,7 +1111,7 @@ void tsetchar(Rune u, Glyph *attr, int x, int y) {
 
 void tclearregion(int x1, int y1, int x2, int y2) {
   int x, y, temp;
-  Glyph *gp;
+  MTGlyph *gp;
 
   if (x1 > x2)
     temp = x1, x1 = x2, x2 = temp;
@@ -1142,7 +1139,7 @@ void tclearregion(int x1, int y1, int x2, int y2) {
 
 void tdeletechar(int n) {
   int dst, src, size;
-  Glyph *line;
+  MTGlyph *line;
 
   LIMIT(n, 0, term.col - term.c.x);
 
@@ -1151,13 +1148,13 @@ void tdeletechar(int n) {
   size = term.col - src;
   line = term.line[term.c.y];
 
-  memmove(&line[dst], &line[src], size * sizeof(Glyph));
+  memmove(&line[dst], &line[src], size * sizeof(MTGlyph));
   tclearregion(term.col - n, term.c.y, term.col - 1, term.c.y);
 }
 
 void tinsertblank(int n) {
   int dst, src, size;
-  Glyph *line;
+  MTGlyph *line;
 
   LIMIT(n, 0, term.col - term.c.x);
 
@@ -1166,7 +1163,7 @@ void tinsertblank(int n) {
   size = term.col - dst;
   line = term.line[term.c.y];
 
-  memmove(&line[dst], &line[src], size * sizeof(Glyph));
+  memmove(&line[dst], &line[src], size * sizeof(MTGlyph));
   tclearregion(src, term.c.y, dst - 1, term.c.y);
 }
 
@@ -1847,7 +1844,7 @@ void tdumpsel(void) {
 
 void tdumpline(int n) {
   char buf[UTF_SIZ];
-  Glyph *bp, *end;
+  MTGlyph *bp, *end;
 
   bp = &term.line[n][0];
   end = &bp[MIN(tlinelen(n), term.col) - 1];
@@ -2132,7 +2129,7 @@ void tputc(Rune u) {
   char c[UTF_SIZ];
   int control;
   int width, len;
-  Glyph *gp;
+  MTGlyph *gp;
 
   control = ISCONTROL(u);
   if (!IS_SET(MODE_UTF8) && !IS_SET(MODE_SIXEL)) {
@@ -2247,7 +2244,7 @@ check_control_code:
   }
 
   if (IS_SET(MODE_INSERT) && term.c.x + width < term.col)
-    memmove(gp + width, gp, (term.col - term.c.x - width) * sizeof(Glyph));
+    memmove(gp + width, gp, (term.col - term.c.x - width) * sizeof(MTGlyph));
 
   if (term.c.x + width > term.col) {
     tnewline(1);
@@ -2312,14 +2309,14 @@ void tresize(int col, int row) {
 
   /* resize each row to new width, zero-pad if needed */
   for (i = 0; i < minrow; i++) {
-    term.line[i] = xrealloc(term.line[i], col * sizeof(Glyph));
-    term.alt[i] = xrealloc(term.alt[i], col * sizeof(Glyph));
+    term.line[i] = xrealloc(term.line[i], col * sizeof(MTGlyph));
+    term.alt[i] = xrealloc(term.alt[i], col * sizeof(MTGlyph));
   }
 
   /* allocate any new rows */
   for (/* i = minrow */; i < row; i++) {
-    term.line[i] = xmalloc(col * sizeof(Glyph));
-    term.alt[i] = xmalloc(col * sizeof(Glyph));
+    term.line[i] = xmalloc(col * sizeof(MTGlyph));
+    term.alt[i] = xmalloc(col * sizeof(MTGlyph));
   }
   if (col > term.col) {
     bp = term.tabs + term.col;
