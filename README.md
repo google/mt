@@ -24,7 +24,6 @@ the Ninja generator of CMake is encouraged.
 
 ## Cleanup
 
-- Cleanup the code with clang-format.
 - Switch to C++
 - Use C++ to simplify any constructs.
 - Identify any existing libraries that can be used effectively.
