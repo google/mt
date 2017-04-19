@@ -4,12 +4,12 @@ This is intended to be a modern, minimalist terminal emulator for X with the
 following design priorities:
 
 - Work well with other platform's modern terminal emulators (iTerm2, hterm).
-	This means largely being xterm-compatible rather than using a custom terminfo
-	database entry.
+  This means largely being xterm-compatible rather than using a custom terminfo
+  database entry.
 - Zero non-terminal UI components (no menus, no scroll bars, etc.) and leverage
-	in-terminal tools like tmux for these kinds of features.
+  in-terminal tools like tmux for these kinds of features.
 - High quality font rendering and color support. The terminal itself should
-	look as good as it is possible to look in X.
+  look as good as it is possible to look in X.
 
 While satisfying these criteria, the terminal should be as small and
 low-overhead as possible. Also, it should use any modern software development
@@ -32,9 +32,9 @@ the Ninja generator of CMake is encouraged.
 ## Terminal emulation
 
 - Compare all terminal codes with xterm, iTerm2, and hterm; harmonize where
-	possible.
+  possible.
 - From the original `st` documentation
-	- double-height support
+  - double-height support
 
 ## Display and rendering
 
@@ -46,7 +46,7 @@ the Ninja generator of CMake is encouraged.
 ## Application
 
 - Add configuration file reading rather than compiling all settings into the
-	binary.
+  binary.
 
 ## Bugs and/or known isuses
 
@@ -69,5 +69,5 @@ This is not an official Google product.
 This is based on the `st` terminal, but doesn't share the same goals or
 development philosophy and so is very likely to diverge. From that project's
 documentation:
-  
-	Based on Aurélien APTEL <aurelien dot aptel at gmail dot com> bt source code.
+
+  Based on Aurélien APTEL <aurelien dot aptel at gmail dot com> bt source code.
