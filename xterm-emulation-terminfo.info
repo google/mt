@@ -1,0 +1,232 @@
+# We store the expected terminfo behavior of 'mt' in the terminfo format for
+# easy comparison with whatever terminfo is available on a particular system
+# for xterm (which 'mt' emulates). Each of the entries is annotated to help
+# clarify its origins when it isn't common between xterm and 'mt'. The entries
+# marked 'st' come from the original 'st' terminfo. The entries marked 'xterm'
+# match what is in its terminfo. There are also a few commented out duplicates
+# where there are different values found in the 'xterm', 'st', and 'st-meta'
+# terminfo. All of these need to be carefully evaluated and resolved to either
+# not be provided if really unnecessary when emulating xterm, be supported by
+# the implementation of 'mt' if they come from 'xterm' and haven't been
+# incorporated, or have the discrepancy between them resolved.
+#
+# These are terminfo definitions that can be used if your system doesn't have
+# one, or if the one on your system doesn't support the desired features.
+#
+# Note that the 'mt' terminal purports to be compatible with 'xterm' and uses
+# that name in its 'TERM' environment variable. As a consequence, the name here
+# matches that one. If you actually use 'xterm' you may not want to replace
+# your terminfo with this.
+xterm-256color| Generic terminfo settings that are largely xterm compatible.
+  Ms=\E]52;%p1%s;%p2%s\007, # st
+  Se, # st
+  Ss, # st
+  Tc, # st
+  # xterm: acsc=``aaffgghFiGjjkkllmmnnooppqqrrssttuuvvwwxxyyzz{{||}}~~,
+  acsc=+C\,D-A.B0E``aaffgghFiGjjkkllmmnnooppqqrrssttuuvvwwxxyyzz{{||}}~~,
+  am,
+  bce,
+  bel=^G,
+  blink=\E[5m,
+  bold=\E[1m,
+  cbt=\E[Z,
+  ccc, # xterm
+  civis=\E[?25l,
+  clear=\E[H\E[2J,
+  cnorm=\E[?12l\E[?25h,
+  colors#256,
+  cols#80,
+  cr=^M,
+  csr=\E[%i%p1%d;%p2%dr,
+  cub1=^H,
+  cub=\E[%p1%dD,
+  cud1=^J,
+  cud=\E[%p1%dB,
+  cuf1=\E[C,
+  cuf=\E[%p1%dC,
+  cup=\E[%i%p1%d;%p2%dH,
+  cuu1=\E[A,
+  cuu=\E[%p1%dA,
+  # xterm: cvvis=\E[?12;25h,
+  cvvis=\E[?25h,
+  dch1=\E[P,
+  dch=\E[%p1%dP,
+  dl1=\E[M,
+  dl=\E[%p1%dM,
+  ech=\E[%p1%dX,
+  ed=\E[J,
+  el1=\E[1K,
+  el=\E[K,
+  enacs=\E)0, # st
+  # xterm flash=\E[?5h$<100/>\E[?5l,
+  flash=\E[?5h$<80/>\E[?5l,
+  fsl=^G, # st
+  home=\E[H,
+  hpa=\E[%i%p1%dG,
+  hs, # st
+  ht=^I,
+  hts=\EH,
+  ich=\E[%p1%d@,
+  il1=\E[L,
+  il=\E[%p1%dL,
+  ind=^J,
+  indn=\E[%p1%dS,
+  initc=\E]4;%p1%d;rgb\:%p2%{255}%*%{1000}%/%2.2X/%p3%{255}%*%{1000}%/%2.2X/%p4%{255}%*%{1000}%/%2.2X\E\\, # xterm
+  invis=\E[8m,
+  # xterm: is2=\E[!p\E[?3;4l\E[4l\E>,
+  # st-meta: is2=\E[4l\E>\E[?1034h,
+  is2=\E[4l\E>\E[?1034l,
+  it#8,
+  kDC=\E[3;2~,
+  kEND=\E[1;2F,
+  kHOM=\E[1;2H,
+  kIC=\E[2;2~,
+  kLFT=\E[1;2D,
+  kNXT=\E[6;2~,
+  kPRV=\E[5;2~,
+  kRIT=\E[1;2C,
+  ka1=\E[1~, # st
+  ka3=\E[5~, # st
+  # xterm: kb2=\EOE,
+  kb2=\EOu,
+  kbs=\177,
+  kc1=\E[4~, # st
+  kc3=\E[6~, # st
+  kcbt=\E[Z,
+  kclr=\E[3;5~, # st
+  kcub1=\EOD,
+  kcud1=\EOB,
+  kcuf1=\EOC,
+  kcuu1=\EOA,
+  kdch1=\E[3~,
+  kdl1=\E[3;2~, # st
+  ked=\E[1;5F, # st
+  kel=\E[1;2F, # st
+  # xterm: kend=\EOF,
+  kend=\E[4~,
+  kent=\EOM,
+  kf10=\E[21~,
+  kf11=\E[23~,
+  kf12=\E[24~,
+  kf13=\E[1;2P,
+  kf14=\E[1;2Q,
+  kf15=\E[1;2R,
+  kf16=\E[1;2S,
+  kf17=\E[15;2~,
+  kf18=\E[17;2~,
+  kf19=\E[18;2~,
+  kf1=\EOP,
+  kf20=\E[19;2~,
+  kf21=\E[20;2~,
+  kf22=\E[21;2~,
+  kf23=\E[23;2~,
+  kf24=\E[24;2~,
+  kf25=\E[1;5P,
+  kf26=\E[1;5Q,
+  kf27=\E[1;5R,
+  kf28=\E[1;5S,
+  kf29=\E[15;5~,
+  kf2=\EOQ,
+  kf30=\E[17;5~,
+  kf31=\E[18;5~,
+  kf32=\E[19;5~,
+  kf33=\E[20;5~,
+  kf34=\E[21;5~,
+  kf35=\E[23;5~,
+  kf36=\E[24;5~,
+  kf37=\E[1;6P,
+  kf38=\E[1;6Q,
+  kf39=\E[1;6R,
+  kf3=\EOR,
+  kf40=\E[1;6S,
+  kf41=\E[15;6~,
+  kf42=\E[17;6~,
+  kf43=\E[18;6~,
+  kf44=\E[19;6~,
+  kf45=\E[20;6~,
+  kf46=\E[21;6~,
+  kf47=\E[23;6~,
+  kf48=\E[24;6~,
+  kf49=\E[1;3P,
+  kf4=\EOS,
+  kf50=\E[1;3Q,
+  kf51=\E[1;3R,
+  kf52=\E[1;3S,
+  kf53=\E[15;3~,
+  kf54=\E[17;3~,
+  kf55=\E[18;3~,
+  kf56=\E[19;3~,
+  kf57=\E[20;3~,
+  kf58=\E[21;3~,
+  kf59=\E[23;3~,
+  kf5=\E[15~,
+  kf60=\E[24;3~,
+  kf61=\E[1;4P,
+  kf62=\E[1;4Q,
+  kf63=\E[1;4R,
+  kf6=\E[17~,
+  kf7=\E[18~,
+  kf8=\E[19~,
+  kf9=\E[20~,
+  # xterm: khome=\EOH,
+  khome=\E[1~,
+  kich1=\E[2~,
+  kich1=\E[2~, # st
+  kil1=\E[2;5~, # st
+  kind=\E[1;2B,
+  km,
+  kmous=\E[M,
+  knp=\E[6~,
+  kpp=\E[5~,
+  kri=\E[1;2A,
+  krmir=\E[2;2~, # st
+  lines#24,
+  mc0=\E[i,
+  mc4=\E[4i,
+  mc5=\E[5i,
+  mc5i, # xterm
+  mir,
+  msgr,
+  npc,
+  op=\E[39;49m,
+  pairs#32767,
+  rc=\E8,
+  rev=\E[7m,
+  ri=\EM,
+  rin=\E[%p1%dT, # xterm
+  ritm=\E[23m,
+  rmacs=\E(B,
+  rmam=\E[?7l, # xterm
+  rmcup=\E[?1049l,
+  rmir=\E[4l,
+  rmkx=\E[?1l\E>,
+  rmso=\E[27m,
+  rmul=\E[24m,
+  rs1=\Ec,
+  # xterm: rs2=\E[!p\E[?3;4l\E[4l\E>,
+  # st-meta: rs2=\E[4l\E>\E[?1034h,
+  rs2=\E[4l\E>\E[?1034l,
+  sc=\E7,
+  setab=\E[%?%p1%{8}%<%t4%p1%d%e%p1%{16}%<%t10%p1%{8}%-%d%e48;5;%p1%d%;m,
+  setaf=\E[%?%p1%{8}%<%t3%p1%d%e%p1%{16}%<%t9%p1%{8}%-%d%e38;5;%p1%d%;m,
+  setb=\E[4%?%p1%{1}%=%t4%e%p1%{3}%=%t6%e%p1%{4}%=%t1%e%p1%{6}%=%t3%e%p1%d%;m, # st
+  setf=\E[3%?%p1%{1}%=%t4%e%p1%{3}%=%t6%e%p1%{4}%=%t1%e%p1%{6}%=%t3%e%p1%d%;m, # st
+  # xterm: sgr0=\E(B\E[m,
+  sgr0=\E[0m,
+  sgr=%?%p9%t\E(0%e\E(B%;\E[0%?%p6%t;1%;%?%p2%t;4%;%?%p1%p3%|%t;7%;%?%p4%t;5%;%?%p7%t;8%;m,
+  sitm=\E[3m,
+  smacs=\E(0,
+  smam=\E[?7h, # xterm
+  smcup=\E[?1049h,
+  smir=\E[4h,
+  smkx=\E[?1h\E=,
+  smso=\E[7m,
+  smul=\E[4m,
+  tbc=\E[3g,
+  tsl=\E]0;, # st
+  u6=\E[%i%d;%dR, # xterm
+  u7=\E[6n, # xterm
+  u8=\E[?1;2c, # xterm
+  u9=\E[c, # xterm
+  vpa=\E[%i%p1%dd,
+  xenl,
