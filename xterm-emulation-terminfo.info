@@ -103,8 +103,7 @@ xterm-256color| Generic terminfo settings that are largely xterm compatible.
   kdl1=\E[3;2~, # st
   ked=\E[1;5F, # st
   kel=\E[1;2F, # st
-  # xterm: kend=\EOF,
-  kend=\E[4~,
+  kend=\EOF,
   kent=\EOM,
   kf10=\E[21~,
   kf11=\E[23~,
@@ -169,8 +168,7 @@ xterm-256color| Generic terminfo settings that are largely xterm compatible.
   kf7=\E[18~,
   kf8=\E[19~,
   kf9=\E[20~,
-  # xterm: khome=\EOH,
-  khome=\E[1~,
+  khome=\EOH,
   kich1=\E[2~,
   kil1=\E[2;5~, # st
   kind=\E[1;2B,
