@@ -89,8 +89,7 @@ xterm-256color| Generic terminfo settings that are largely xterm compatible.
   ka3=\E[5~, # st
   # xterm: kb2=\EOE,
   kb2=\EOu,
-  # xterm: kbs=^H,
-  kbs=\177,
+  kbs=^H,
   kc1=\E[4~, # st
   kc3=\E[6~, # st
   kcbt=\E[Z,
