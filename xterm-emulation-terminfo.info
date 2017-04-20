@@ -171,7 +171,6 @@ xterm-256color| Generic terminfo settings that are largely xterm compatible.
   # xterm: khome=\EOH,
   khome=\E[1~,
   kich1=\E[2~,
-  kich1=\E[2~, # st
   kil1=\E[2;5~, # st
   kind=\E[1;2B,
   km,
