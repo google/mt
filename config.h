@@ -423,11 +423,3 @@ uint selmasks[] = {
         [SEL_RECTANGULAR] = Mod1Mask,
 };
 
-/*
- * Printable characters in ASCII, used to estimate the advance width
- * of single wide characters.
- */
-char ascii_printable[] = " !\"#$%&'()*+,-./0123456789:;<=>?"
-                         "@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_"
-                         "`abcdefghijklmnopqrstuvwxyz{|}~";
-

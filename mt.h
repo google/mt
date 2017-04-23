@@ -263,6 +263,5 @@ extern size_t shortcutslen;
 extern uint forceselmod;
 extern uint selmasks[];
 extern size_t selmaskslen;
-extern char ascii_printable[];
 
 #endif
