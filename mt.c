@@ -622,7 +622,7 @@ void execsh(void) {
     sh = "/bin/sh";
   }
 
-  // The program to execute is $SHELL unless explicitly specified.
+  // The program to execute is the shell unless explicitly specified.
   char **args, *prog;
   if (opt_cmd) {
     prog = opt_cmd[0];
