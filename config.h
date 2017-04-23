@@ -373,10 +373,3 @@ static Key key[] = {
 uint selmasks[] = {
         [SEL_RECTANGULAR] = Mod1Mask,
 };
-
-// Printable characters in ASCII.
-// Used to calculate the average character width in a font.
-char ascii_printable[] = " !\"#$%&'()*+,-./0123456789:;<=>?"
-                         "@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_"
-                         "`abcdefghijklmnopqrstuvwxyz{|}~";
-

@@ -679,6 +679,11 @@ int xloadfont(MTFont *f, FcPattern *pattern) {
     }
   }
 
+  // We take font width as the average of these characters.
+  static char ascii_printable[] =
+      " !\"#$%&'()*+,-./0123456789:;<=>?"
+      "@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_"
+      "`abcdefghijklmnopqrstuvwxyz{|}~";
   XftTextExtentsUtf8(xw.dpy, f->match, (const FcChar8 *)ascii_printable,
                      strlen(ascii_printable), &extents);
 
