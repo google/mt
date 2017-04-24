@@ -89,7 +89,37 @@ const char *colorname[] = {
     /* 8 bright colors */
     "gray50", "red", "green", "yellow", "#5c5cff", "magenta", "cyan", "white",
 
-    [255] = 0,
+    // FIXME: this is silly.
+    nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr,
+    nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr,
+    nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr,
+    nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr,
+    nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr,
+    nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr,
+    nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr,
+    nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr,
+    nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr,
+    nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr,
+    nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr,
+    nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr,
+    nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr,
+    nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr,
+    nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr,
+    nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr,
+    nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr,
+    nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr,
+    nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr,
+    nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr,
+    nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr,
+    nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr,
+    nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr,
+    nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr,
+    nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr,
+    nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr,
+    nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr,
+    nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr,
+    nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr,
+    nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr,
 
     /* more colors can be added after 255 to use with DefaultXX */
     "#cccccc", "#555555",
@@ -149,18 +179,18 @@ MouseShortcut mshortcuts[] = {
 
 Shortcut shortcuts[] = {
   /* mask                 keysym          function        argument */
-  { XK_ANY_MOD,           XK_Break,       sendbreak,      {.i =  0} },
-  { ControlMask,          XK_Print,       toggleprinter,  {.i =  0} },
-  { ShiftMask,            XK_Print,       printscreen,    {.i =  0} },
-  { XK_ANY_MOD,           XK_Print,       printsel,       {.i =  0} },
-  { TERMMOD,              XK_Prior,       zoom,           {.f = +1} },
-  { TERMMOD,              XK_Next,        zoom,           {.f = -1} },
-  { TERMMOD,              XK_Home,        zoomreset,      {.f =  0} },
-  { TERMMOD,              XK_C,           clipcopy,       {.i =  0} },
-  { TERMMOD,              XK_V,           clippaste,      {.i =  0} },
-  { TERMMOD,              XK_Y,           selpaste,       {.i =  0} },
-  { TERMMOD,              XK_Num_Lock,    numlock,        {.i =  0} },
-  { TERMMOD,              XK_I,           iso14755,       {.i =  0} },
+  { XK_ANY_MOD,           XK_Break,       sendbreak,      0 },
+  { ControlMask,          XK_Print,       toggleprinter,  0 },
+  { ShiftMask,            XK_Print,       printscreen,    0 },
+  { XK_ANY_MOD,           XK_Print,       printsel,       0 },
+  { TERMMOD,              XK_Prior,       zoom,           +1.f },
+  { TERMMOD,              XK_Next,        zoom,           -1.f },
+  { TERMMOD,              XK_Home,        zoomreset,      0.f },
+  { TERMMOD,              XK_C,           clipcopy,       0 },
+  { TERMMOD,              XK_V,           clippaste,      0 },
+  { TERMMOD,              XK_Y,           selpaste,       0 },
+  { TERMMOD,              XK_Num_Lock,    numlock,        0 },
+  { TERMMOD,              XK_I,           iso14755,       0 },
 };
 
 /*
@@ -192,7 +222,7 @@ Shortcut shortcuts[] = {
  * If you want keys other than the X11 function keys (0xFD00 - 0xFFFF)
  * to be mapped below, add them to this array.
  */
-static KeySym mappedkeys[] = {-1};
+static KeySym mappedkeys[] = {0 /* avoid zero-length array */};
 
 /*
  * State bits to ignore when matching key or button events.  By default,
@@ -420,7 +450,9 @@ static Key key[] = {
  * If no match is found, regular selection is used.
  */
 uint selmasks[] = {
-        [SEL_RECTANGULAR] = Mod1Mask,
+    /* none= */ 0,
+    /* SEL_REGULAR= */ 0,
+    /* SEL_RECTANGULAR= */ Mod1Mask,
 };
 
 /*
