@@ -1966,8 +1966,8 @@ void tcontrolcode(uchar ascii) {
     } else {
       if (!(win.state & WIN_FOCUSED))
         xseturgency(1);
-      if (bellvolume)
-        xbell(bellvolume);
+      if (bell)
+        xbell();
     }
     break;
   case '\033': /* ESC */
