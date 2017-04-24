@@ -89,7 +89,9 @@ xterm-256color| Generic terminfo settings that are largely xterm compatible.
   ka3=\E[5~, # st
   # xterm: kb2=\EOE,
   kb2=\EOu,
-  # xterm: kbs=^H, (but most linux distributions change this to \177)
+  # xterm: kbs=^H
+  # Most linux distributions change this to kbs=\177.
+  # On Mac, this is ^H but terminals ignore it and send \177.
   kbs=\177,
   kc1=\E[4~, # st
   kc3=\E[6~, # st
