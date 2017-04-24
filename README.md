@@ -24,8 +24,7 @@ the Ninja generator of CMake is encouraged.
 
 ## Cleanup
 
-- Switch to C++
-- Use C++ to simplify any constructs.
+- Use C++ to simplify any constructs from the old C code.
 - Identify any existing libraries that can be used effectively.
 - Factor code into libraries and write unittests.
 
