@@ -917,7 +917,8 @@ void treset(void) {
                      .state = CURSOR_DEFAULT};
 
   memset(term.tabs, 0, term.col * sizeof(*term.tabs));
-  for (i = tabspaces; i < term.col; i += tabspaces)
+  // Inital tabstops every 8 columns, matching 'it#' in terminfo.
+  for (i = 8; i < term.col; i += 8)
     term.tabs[i] = 1;
   term.top = 0;
   term.bot = term.row - 1;
@@ -2317,9 +2318,19 @@ void tresize(int col, int row) {
     term.line[i] = xmalloc(col * sizeof(MTGlyph));
     term.alt[i] = xmalloc(col * sizeof(MTGlyph));
   }
+  // If the window was widened, tabstops may need to be added.
   if (col > term.col) {
-    bp = term.tabs + term.col;
+    // Guess the width based on the first tabstop (user may have adjusted it).
+    int tabspaces = 8;
+    for (int i = 1; i < term.col; ++i) {
+      if (term.tabs[i]) {
+        tabspaces = i;
+        break;
+      }
+    }
 
+    // Insert tabstops at regular intervals after the last one.
+    bp = term.tabs + term.col;
     memset(bp, 0, sizeof(*term.tabs) * (col - term.col));
     while (--bp > term.tabs && !*bp)
       /* nothing */;

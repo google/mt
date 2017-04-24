@@ -62,10 +62,6 @@ static int bellvolume = 0;
 // Value of the $TERM variable.
 char termname[] = "xterm-256color";
 
-// Tab width.
-// Changing this requires modifying the terminfo database.
-static unsigned int tabspaces = 8;
-
 // Available terminal colors (X color names, or #123abc hex codes).
 // Basic colors (required):
 //  0-7:     basic colors - black, red, green, yellow, blue, magenta, cyan, grey
