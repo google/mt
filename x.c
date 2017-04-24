@@ -1562,9 +1562,6 @@ int main(int argc, char *argv[]) {
   case 'o':
     opt_io = EARGF(usage());
     break;
-  case 'l':
-    opt_line = EARGF(usage());
-    break;
   case 'n':
     opt_name = EARGF(usage());
     break;
@@ -1587,7 +1584,7 @@ run:
   if (argc > 0) {
     /* eat all remaining arguments */
     opt_cmd = argv;
-    if (!opt_title && !opt_line)
+    if (!opt_title)
       opt_title = basename(xstrdup(argv[0]));
   }
   setlocale(LC_CTYPE, "");
