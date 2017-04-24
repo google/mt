@@ -136,7 +136,6 @@ static void sendbreak(const Arg *);
 #include "config.h"
 
 static void execsh(void);
-static void stty(void);
 static void sigchld(int);
 
 static void csidump(void);
@@ -207,7 +206,6 @@ char *opt_class = NULL;
 char *opt_embed = NULL;
 char *opt_font = NULL;
 char *opt_io = NULL;
-char *opt_line = NULL;
 char *opt_name = NULL;
 char *opt_title = NULL;
 int oldbutton = 3; /* button event on startup: 3 = release */
@@ -663,28 +661,6 @@ void sigchld(int a) {
   exit(0);
 }
 
-void stty(void) {
-  char cmd[_POSIX_ARG_MAX], **p, *q, *s;
-  size_t n, siz;
-
-  if ((n = strlen(stty_args)) > sizeof(cmd) - 1)
-    die("incorrect stty parameters\n");
-  memcpy(cmd, stty_args, n);
-  q = cmd + n;
-  siz = sizeof(cmd) - n;
-  for (p = opt_cmd; p && (s = *p); ++p) {
-    if ((n = strlen(s)) > siz - 1)
-      die("stty parameter length too long\n");
-    *q++ = ' ';
-    memcpy(q, s, n);
-    q += n;
-    siz -= n + 1;
-  }
-  *q = '\0';
-  if (system(cmd) != 0)
-    perror("Couldn't call stty");
-}
-
 void ttynew(void) {
   int m, s;
   struct winsize w = {term.row, term.col, 0, 0};
@@ -695,14 +671,6 @@ void ttynew(void) {
     if (iofd < 0) {
       fprintf(stderr, "Error opening %s:%s\n", opt_io, strerror(errno));
     }
-  }
-
-  if (opt_line) {
-    if ((cmdfd = open(opt_line, O_RDWR)) < 0)
-      die("open line failed: %s\n", strerror(errno));
-    dup2(cmdfd, 0);
-    stty();
-    return;
   }
 
   /* seems to work fine on linux, openbsd and freebsd */
@@ -2458,10 +2426,6 @@ void usage(void) {
   die("usage: %s [-aiv] [-c class] [-f font] [-g geometry]"
       " [-n name] [-o file]\n"
       "          [-T title] [-t title] [-w windowid]"
-      " [[-e] command [args ...]]\n"
-      "       %s [-aiv] [-c class] [-f font] [-g geometry]"
-      " [-n name] [-o file]\n"
-      "          [-T title] [-t title] [-w windowid] -l line"
-      " [stty_args ...]\n",
-      argv0, argv0);
+      " [[-e] command [args ...]]\n",
+      argv0);
 }
