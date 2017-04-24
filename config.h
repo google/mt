@@ -54,11 +54,9 @@ unsigned int blinktimeout = 800;
  */
 unsigned int cursorthickness = 2;
 
-/*
- * bell volume. It must be a value between -100 and 100. Use 0 for disabling
- * it
- */
-static int bellvolume = 0;
+// Ring the bell for the ^G character.
+// XkbBell() is used, the volume can be controlled with xset.
+static int bell = 0;
 
 /* default TERM value */
 char termname[] = "xterm-256color";
