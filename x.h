@@ -12,7 +12,7 @@ void draw(void);
 void drawregion(int, int, int, int);
 void run(void);
 
-void xbell(int);
+void xbell(void);
 void xclipcopy(void);
 void xclippaste(void);
 void xhints(void);

@@ -48,12 +48,9 @@ unsigned int blinktimeout = 800;
 // Width of the underline and vertical bar cursors, in pixels.
 unsigned int cursorthickness = 2;
 
-// Volume of bell (^G).
-// If zero, the bell is disabled.
-// Otherwise the volume is passed to XBell():
-//   -100 to -1 is the range from silent to base volume
-//   1 to 100 is the range from base to max volume
-static int bellvolume = 0;
+// Ring the bell for the ^G character.
+// XkbBell() is used, the volume can be controlled with xset.
+static int bell = 0;
 
 // Value of the $TERM variable.
 char termname[] = "xterm-256color";

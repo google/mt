@@ -1340,7 +1340,7 @@ void xseturgency(int add) {
   XFree(h);
 }
 
-void xbell(int vol) { XkbBell(xw.dpy, xw.win, vol, (Atom)NULL); }
+void xbell(void) { XkbBell(xw.dpy, xw.win, 0, (Atom)NULL); }
 
 unsigned long xwinid(void) { return xw.win; }
 
