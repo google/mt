@@ -1,19 +1,25 @@
 #include "mt.h"
 
-#include <ctype.h>
-#include <errno.h>
+#include <cctype>
+#include <cerrno>
+#include <climits>
+#include <clocale>
+#include <csignal>
+#include <cstdarg>
+#include <cstdint>
+#include <cstdio>
+#include <cstdlib>
+#include <cstring>
+#include <ctime>
+#include <cwchar>
+
+extern "C" {
+#include <X11/Xft/Xft.h>
+#include <X11/cursorfont.h>
 #include <fcntl.h>
 #include <fontconfig/fontconfig.h>
 #include <libgen.h>
-#include <limits.h>
-#include <locale.h>
 #include <pwd.h>
-#include <signal.h>
-#include <stdarg.h>
-#include <stdint.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
 #include <sys/ioctl.h>
 #include <sys/select.h>
 #include <sys/stat.h>
@@ -21,12 +27,7 @@
 #include <sys/types.h>
 #include <sys/wait.h>
 #include <termios.h>
-#include <time.h>
 #include <unistd.h>
-#include <wchar.h>
-
-#include <X11/Xft/Xft.h>
-#include <X11/cursorfont.h>
 
 #if defined(__linux)
 #include <pty.h>
@@ -35,6 +36,7 @@
 #elif defined(__FreeBSD__) || defined(__DragonFly__)
 #include <libutil.h>
 #endif
+}
 
 #include "x.h"
 
@@ -111,7 +113,7 @@ typedef struct {
 typedef struct {
   KeySym k;
   uint mask;
-  char *s;
+  const char *s;
   /* three valued logic variables: 0 indifferent, 1 on, -1 off */
   signed char appkey;    /* application keypad */
   signed char appcursor; /* application cursor */
@@ -148,7 +150,7 @@ static void strhandle(void);
 static void strparse(void);
 static void strreset(void);
 
-static void tprinter(char *, size_t);
+static void tprinter(const char *, size_t);
 static void tdumpsel(void);
 static void tdumpline(int);
 static void tdump(void);
@@ -193,7 +195,6 @@ static size_t utf8validate(Rune *, size_t);
 static char *base64dec(const char *);
 
 static ssize_t xwrite(int, const char *, size_t);
-static void *xrealloc(void *, size_t);
 
 /* Globals */
 TermWindow win;
@@ -248,20 +249,20 @@ ssize_t xwrite(int fd, const char *s, size_t len) {
   return aux;
 }
 
-void *xmalloc(size_t len) {
-  void *p = malloc(len);
+template <typename T> T *xmalloc(size_t len) {
+  void *p = malloc(len * sizeof(T));
 
   if (!p)
     die("Out of memory\n");
 
-  return p;
+  return static_cast<T *>(p);
 }
 
-void *xrealloc(void *p, size_t len) {
-  if ((p = realloc(p, len)) == NULL)
+template <typename T> T *xrealloc(void *p, size_t len) {
+  if ((p = realloc(p, len * sizeof(T))) == NULL)
     die("Out of memory\n");
 
-  return p;
+  return static_cast<T *>(p);
 }
 
 char *xstrdup(char *s) {
@@ -271,7 +272,7 @@ char *xstrdup(char *s) {
   return s;
 }
 
-size_t utf8decode(char *c, Rune *u, size_t clen) {
+size_t utf8decode(const char *c, Rune *u, size_t clen) {
   size_t i, j, len, type;
   Rune udecoded;
 
@@ -366,7 +367,7 @@ char *base64dec(const char *src) {
 
   if (in_len % 4)
     return NULL;
-  result = dst = xmalloc(in_len / 4 * 3 + 1);
+  result = dst = xmalloc<char>(in_len / 4 * 3 + 1);
   while (*src) {
     int a = base64_digits[(unsigned char)*src++];
     int b = base64_digits[(unsigned char)*src++];
@@ -536,7 +537,7 @@ char *getsel(void) {
     return NULL;
 
   bufsize = (term.col + 1) * (sel.ne.y - sel.nb.y + 1) * UTF_SIZ;
-  ptr = str = xmalloc(bufsize);
+  ptr = str = xmalloc<char>(bufsize);
 
   /* append every set & selected glyph to the selection */
   for (y = sel.nb.y; y <= sel.ne.y; y++) {
@@ -623,7 +624,8 @@ void execsh(void) {
     prog = utmp;
   else
     prog = sh;
-  args = (opt_cmd) ? opt_cmd : (char *[]){prog, NULL};
+  char *prog_only[] = {prog, NULL};
+  args = (opt_cmd) ? opt_cmd : prog_only;
 
   unsetenv("COLUMNS");
   unsetenv("LINES");
@@ -663,7 +665,8 @@ void sigchld(int a) {
 
 void ttynew(void) {
   int m, s;
-  struct winsize w = {term.row, term.col, 0, 0};
+  struct winsize w = {static_cast<unsigned short>(term.row),
+                      static_cast<unsigned short>(term.col), 0, 0};
 
   if (opt_io) {
     term.mode |= MODE_PRINT;
@@ -795,9 +798,9 @@ write_error:
   die("write error on tty: %s\n", strerror(errno));
 }
 
-void ttysend(char *s, size_t n) {
+void ttysend(const char *s, size_t n) {
   int len;
-  char *t, *lim;
+  const char *t, *lim;
   Rune u;
 
   ttywrite(s, n);
@@ -883,10 +886,9 @@ void tcursor(int mode) {
 void treset(void) {
   uint i;
 
-  term.c = (TCursor){{.mode = ATTR_NULL, .fg = defaultfg, .bg = defaultbg},
-                     .x = 0,
-                     .y = 0,
-                     .state = CURSOR_DEFAULT};
+  term.c = TCursor{MTGlyph{/* rune */ 0, ATTR_NULL, defaultfg, defaultbg},
+                   /* x */ 0,
+                   /* y */ 0, CURSOR_DEFAULT};
 
   memset(term.tabs, 0, term.col * sizeof(*term.tabs));
   // Inital tabstops every 8 columns, matching 'it#' in terminfo.
@@ -907,7 +909,8 @@ void treset(void) {
 }
 
 void tnew(int col, int row) {
-  term = (Term){.c = {.attr = {.fg = defaultfg, .bg = defaultbg}}};
+  term = {};
+  term.c.attr = {/* rune */ 0, ATTR_NULL, defaultfg, defaultbg};
   tresize(col, row);
   term.numlock = 1;
 
@@ -1047,7 +1050,7 @@ void tmoveto(int x, int y) {
 }
 
 void tsetchar(Rune u, MTGlyph *attr, int x, int y) {
-  static char *vt100_0[62] = {
+  static const char *vt100_0[62] = {
       /* 0x41 - 0x7e */
       "↑", "↓", "→", "←", "█", "▚", "☃",      /* A - G */
       0,   0,   0,   0,   0,   0,   0,   0,   /* H - O */
@@ -1769,7 +1772,7 @@ void sendbreak(const Arg *arg) {
     perror("Error sending break");
 }
 
-void tprinter(char *s, size_t len) {
+void tprinter(const char *s, size_t len) {
   if (iofd != -1 && xwrite(iofd, s, len) < 0) {
     fprintf(stderr, "Error writing in %s:%s\n", opt_io, strerror(errno));
     close(iofd);
@@ -2271,24 +2274,24 @@ void tresize(int col, int row) {
   }
 
   /* resize to new width */
-  term.specbuf = xrealloc(term.specbuf, col * sizeof(XftGlyphFontSpec));
+  term.specbuf = xrealloc<XftGlyphFontSpec>(term.specbuf, col);
 
   /* resize to new height */
-  term.line = xrealloc(term.line, row * sizeof(Line));
-  term.alt = xrealloc(term.alt, row * sizeof(Line));
-  term.dirty = xrealloc(term.dirty, row * sizeof(*term.dirty));
-  term.tabs = xrealloc(term.tabs, col * sizeof(*term.tabs));
+  term.line = xrealloc<Line>(term.line, row * sizeof(Line));
+  term.alt = xrealloc<Line>(term.alt, row * sizeof(Line));
+  term.dirty = xrealloc<int>(term.dirty, row);
+  term.tabs = xrealloc<int>(term.tabs, col);
 
   /* resize each row to new width, zero-pad if needed */
   for (i = 0; i < minrow; i++) {
-    term.line[i] = xrealloc(term.line[i], col * sizeof(MTGlyph));
-    term.alt[i] = xrealloc(term.alt[i], col * sizeof(MTGlyph));
+    term.line[i] = xrealloc<MTGlyph>(term.line[i], col);
+    term.alt[i] = xrealloc<MTGlyph>(term.alt[i], col);
   }
 
   /* allocate any new rows */
   for (/* i = minrow */; i < row; i++) {
-    term.line[i] = xmalloc(col * sizeof(MTGlyph));
-    term.alt[i] = xmalloc(col * sizeof(MTGlyph));
+    term.line[i] = xmalloc<MTGlyph>(col);
+    term.alt[i] = xmalloc<MTGlyph>(col);
   }
   // If the window was widened, tabstops may need to be added.
   if (col > term.col) {
@@ -2332,9 +2335,7 @@ void tresize(int col, int row) {
 }
 
 void zoom(const Arg *arg) {
-  Arg larg;
-
-  larg.f = usedfontsize + arg->f;
+  Arg larg = float(usedfontsize + arg->f);
   zoomabs(&larg);
 }
 
@@ -2348,10 +2349,8 @@ void zoomabs(const Arg *arg) {
 }
 
 void zoomreset(const Arg *arg) {
-  Arg larg;
-
   if (defaultfontsize > 0) {
-    larg.f = defaultfontsize;
+    Arg larg = float(defaultfontsize);
     zoomabs(&larg);
   }
 }
@@ -2369,7 +2368,7 @@ int match(uint mask, uint state) {
 
 void numlock(const Arg *dummy) { term.numlock ^= 1; }
 
-char *kmap(KeySym k, uint state) {
+const char *kmap(KeySym k, uint state) {
   Key *kp;
   int i;
 

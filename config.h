@@ -71,7 +71,37 @@ const char *colorname[] = {
     "gray50", "red", "green", "yellow",
     "#5c5cff", "magenta", "cyan", "white",
 
-    [255] = 0,
+    // FIXME: this is silly.
+    nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr,
+    nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr,
+    nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr,
+    nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr,
+    nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr,
+    nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr,
+    nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr,
+    nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr,
+    nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr,
+    nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr,
+    nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr,
+    nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr,
+    nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr,
+    nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr,
+    nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr,
+    nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr,
+    nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr,
+    nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr,
+    nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr,
+    nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr,
+    nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr,
+    nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr,
+    nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr,
+    nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr,
+    nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr,
+    nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr,
+    nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr,
+    nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr,
+    nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr,
+    nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr,
 
     "#cccccc", "#555555",
 };
@@ -116,24 +146,24 @@ MouseShortcut mshortcuts[] = {
 
 // Keyboard shortcuts that trigger internal functions.
 Shortcut shortcuts[] = {
-  /* mask                       keysym          function        argument */
-  { XK_ANY_MOD,                 XK_Break,       sendbreak,      {.i =  0} },
-  { ControlMask,                XK_Print,       toggleprinter,  {.i =  0} },
-  { ShiftMask,                  XK_Print,       printscreen,    {.i =  0} },
-  { XK_ANY_MOD,                 XK_Print,       printsel,       {.i =  0} },
-  { (ControlMask | ShiftMask),  XK_Prior,       zoom,           {.f = +1} },
-  { (ControlMask | ShiftMask),  XK_Next,        zoom,           {.f = -1} },
-  { (ControlMask | ShiftMask),  XK_Home,        zoomreset,      {.f =  0} },
-  { (ControlMask | ShiftMask),  XK_C,           clipcopy,       {.i =  0} },
-  { (ControlMask | ShiftMask),  XK_V,           clippaste,      {.i =  0} },
-  { (ControlMask | ShiftMask),  XK_Y,           selpaste,       {.i =  0} },
-  { (ControlMask | ShiftMask),  XK_Num_Lock,    numlock,        {.i =  0} },
-  { (ControlMask | ShiftMask),  XK_I,           iso14755,       {.i =  0} },
+  // mask                      keysym          function        argument
+  { XK_ANY_MOD,                XK_Break,       sendbreak,      0 },
+  { ControlMask,               XK_Print,       toggleprinter,  0 },
+  { ShiftMask,                 XK_Print,       printscreen,    0 },
+  { XK_ANY_MOD,                XK_Print,       printsel,       0 },
+  { (ControlMask | ShiftMask), XK_Prior,       zoom,           +1.f },
+  { (ControlMask | ShiftMask), XK_Next,        zoom,           -1.f },
+  { (ControlMask | ShiftMask), XK_Home,        zoomreset,      0.f },
+  { (ControlMask | ShiftMask), XK_C,           clipcopy,       0 },
+  { (ControlMask | ShiftMask), XK_V,           clippaste,      0 },
+  { (ControlMask | ShiftMask), XK_Y,           selpaste,       0 },
+  { (ControlMask | ShiftMask), XK_Num_Lock,    numlock,        0 },
+  { (ControlMask | ShiftMask), XK_I,           iso14755,       0 },
 };
 
 // Keys outside the X11 function key range (0xFD00 - 0xFFFF) with shortcuts.
 // By default, shortcuts in `key` are only scanned for KeySyms in this range.
-static KeySym mappedkeys[] = {-1};
+static KeySym mappedkeys[] = {(KeySym)-1};
 
 // Modifiers to ignore when matching keyboard and mouse events.
 // By default, numlock and keyboard layout are ignored.
@@ -360,5 +390,7 @@ static Key key[] = {
 // Keyboard modifiers that alter the behavior of mouse selection.
 // If no match is found, regular selection is used.
 uint selmasks[] = {
-        [SEL_RECTANGULAR] = Mod1Mask,
+    /* none= */ 0,
+    /* SEL_REGULAR= */ 0,
+    /* SEL_RECTANGULAR= */ Mod1Mask,
 };
