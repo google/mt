@@ -221,7 +221,6 @@ extern char *opt_class;
 extern char *opt_embed;
 extern char *opt_font;
 extern char *opt_io;
-extern char *opt_line;
 extern char *opt_name;
 extern char *opt_title;
 extern int oldbutton;
