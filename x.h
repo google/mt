@@ -2,6 +2,7 @@
 #define MT_X_H
 
 #include <X11/Xlib.h>
+#include <stdbool.h>
 
 /* X modifiers */
 #define XK_ANY_MOD UINT_MAX
@@ -18,12 +19,12 @@ void xclippaste(void);
 void xhints(void);
 void xinit(void);
 void xloadcols(void);
-int xsetcolorname(int, const char *);
+bool xsetcolorname(int, const char *);
 void xloadfonts(char *, double);
 void xsetenv(void);
 void xsettitle(char *);
-void xsetpointermotion(int);
-void xseturgency(int);
+void xsetpointermotion(bool);
+void xseturgency(bool);
 void xunloadfonts(void);
 void xresize(int, int);
 void xselpaste(void);
