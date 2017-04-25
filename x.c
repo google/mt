@@ -869,7 +869,7 @@ void xinit(void) {
 int xmakeglyphfontspecs(XftGlyphFontSpec *specs, const MTGlyph *glyphs, int len,
                         int x, int y) {
   float winx = borderpx + x * win.cw, winy = borderpx + y * win.ch;
-  enum glyph_attribute prevmode = UINT_MAX;
+  ushort prevmode = USHRT_MAX;
   MTFont *font = &dc.font;
   FRCFlags frcflags = FRC_NORMAL;
   float runewidth = win.cw;
@@ -878,7 +878,7 @@ int xmakeglyphfontspecs(XftGlyphFontSpec *specs, const MTGlyph *glyphs, int len,
   for (int i = 0, xp = winx, yp = winy + font->ascent; i < len; ++i) {
     /* Fetch rune and mode for current glyph. */
     Rune rune = glyphs[i].u;
-    enum glyph_attribute mode = glyphs[i].mode;
+    ushort mode = glyphs[i].mode;
 
     /* Skip dummy wide-character spacing. */
     if (mode == ATTR_WDUMMY)

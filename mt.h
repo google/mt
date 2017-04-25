@@ -88,25 +88,19 @@ typedef unsigned short ushort;
 typedef uint_least32_t Rune;
 
 typedef struct {
-  Rune u;                    /* character code */
-  enum glyph_attribute mode; /* attribute flags */
-  uint32_t fg;               /* foreground  */
-  uint32_t bg;               /* background  */
+  Rune u;      /* character code */
+  ushort mode; /* attribute flags */
+  uint32_t fg; /* foreground  */
+  uint32_t bg; /* background  */
 } MTGlyph;
 
 typedef MTGlyph *Line;
-
-enum cursor_state {
-  CURSOR_DEFAULT = 0,
-  CURSOR_WRAPNEXT = 1,
-  CURSOR_ORIGIN = 2
-};
 
 typedef struct {
   MTGlyph attr; /* current char attributes */
   int x;
   int y;
-  enum cursor_state state;
+  char state;
 } TCursor;
 
 enum charset {
@@ -117,17 +111,6 @@ enum charset {
   CS_MULTI,
   CS_GER,
   CS_FIN
-};
-
-enum escape_state {
-  ESC_START = 1,
-  ESC_CSI = 2,
-  ESC_STR = 4, /* OSC, PM, APC */
-  ESC_ALTCHARSET = 8,
-  ESC_STR_END = 16, /* a final string was encountered */
-  ESC_TEST = 32,    /* Enter in test mode */
-  ESC_UTF8 = 64,
-  ESC_DCS = 128,
 };
 
 /* Internal representation of the screen */
@@ -141,8 +124,8 @@ typedef struct {
   TCursor c;              /* cursor */
   int top;                /* top    scroll limit */
   int bot;                /* bottom scroll limit */
-  enum term_mode mode;    /* terminal mode flags */
-  enum escape_state esc;  /* escape state flags */
+  int mode;               /* terminal mode flags */
+  int esc;                /* escape state flags */
   enum charset trantbl[4]; /* charset table translation */
   int charset;            /* current charset */
   int icharset;           /* selected charset for sequence */
@@ -152,12 +135,12 @@ typedef struct {
 
 /* Purely graphic info */
 typedef struct {
-  int tw, th;              /* tty width and height */
-  int w, h;                /* window width and height */
-  int ch;                  /* char height */
-  int cw;                  /* char width  */
-  enum window_state state; /* focus, redraw, visible */
-  int cursor;              /* cursor style */
+  int tw, th; /* tty width and height */
+  int w, h;   /* window width and height */
+  int ch;     /* char height */
+  int cw;     /* char width  */
+  char state; /* focus, redraw, visible */
+  int cursor; /* cursor style */
 } TermWindow;
 
 typedef struct {
