@@ -1,6 +1,7 @@
 #ifndef MT_MT_H
 #define MT_MT_H
 
+#include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
 #include <time.h>
@@ -14,18 +15,18 @@
 #define MIN(a, b) ((a) < (b) ? (a) : (b))
 #define MAX(a, b) ((a) < (b) ? (b) : (a))
 #define LEN(a) (sizeof(a) / sizeof(a)[0])
-#define BETWEEN(x, a, b) ((a) <= (x) && (x) <= (b))
+#define BETWEEN(x, a, b) (bool)((a) <= (x) && (x) <= (b))
 #define DIVCEIL(n, d) (((n) + ((d)-1)) / (d))
 #define LIMIT(x, a, b) (x) = (x) < (a) ? (a) : (x) > (b) ? (b) : (x)
 #define ATTRCMP(a, b)                                                          \
-  ((a).mode != (b).mode || (a).fg != (b).fg || (a).bg != (b).bg)
-#define IS_SET(flag) ((term.mode & (flag)) != 0)
+  (bool)((a).mode != (b).mode || (a).fg != (b).fg || (a).bg != (b).bg)
+#define IS_SET(flag) (bool)((term.mode & (flag)) != 0)
 #define TIMEDIFF(t1, t2)                                                       \
   ((t1.tv_sec - t2.tv_sec) * 1000 + (t1.tv_nsec - t2.tv_nsec) / 1E6)
 #define MODBIT(x, set, bit) ((set) ? ((x) |= (bit)) : ((x) &= ~(bit)))
 
 #define TRUECOLOR(r, g, b) (1 << 24 | (r) << 16 | (g) << 8 | (b))
-#define IS_TRUECOL(x) (1 << 24 & (x))
+#define IS_TRUECOL(x) (bool)(1 << 24 & (x))
 
 enum glyph_attribute {
   ATTR_NULL       = 0,
@@ -75,7 +76,7 @@ enum selection_mode { SEL_IDLE = 0, SEL_EMPTY = 1, SEL_READY = 2 };
 
 enum selection_type { SEL_REGULAR = 1, SEL_RECTANGULAR = 2 };
 
-enum selection_snap { SNAP_WORD = 1, SNAP_LINE = 2 };
+enum selection_snap { SNAP_NONE = 0, SNAP_WORD = 1, SNAP_LINE = 2 };
 
 enum window_state { WIN_VISIBLE = 1, WIN_FOCUSED = 2 };
 
@@ -87,20 +88,47 @@ typedef unsigned short ushort;
 typedef uint_least32_t Rune;
 
 typedef struct {
-  Rune u;      /* character code */
-  ushort mode; /* attribute flags */
-  uint32_t fg; /* foreground  */
-  uint32_t bg; /* background  */
+  Rune u;                    /* character code */
+  enum glyph_attribute mode; /* attribute flags */
+  uint32_t fg;               /* foreground  */
+  uint32_t bg;               /* background  */
 } MTGlyph;
 
 typedef MTGlyph *Line;
+
+enum cursor_state {
+  CURSOR_DEFAULT = 0,
+  CURSOR_WRAPNEXT = 1,
+  CURSOR_ORIGIN = 2
+};
 
 typedef struct {
   MTGlyph attr; /* current char attributes */
   int x;
   int y;
-  char state;
+  enum cursor_state state;
 } TCursor;
+
+enum charset {
+  CS_GRAPHIC0,
+  CS_GRAPHIC1,
+  CS_UK,
+  CS_USA,
+  CS_MULTI,
+  CS_GER,
+  CS_FIN
+};
+
+enum escape_state {
+  ESC_START = 1,
+  ESC_CSI = 2,
+  ESC_STR = 4, /* OSC, PM, APC */
+  ESC_ALTCHARSET = 8,
+  ESC_STR_END = 16, /* a final string was encountered */
+  ESC_TEST = 32,    /* Enter in test mode */
+  ESC_UTF8 = 64,
+  ESC_DCS = 128,
+};
 
 /* Internal representation of the screen */
 typedef struct {
@@ -108,28 +136,28 @@ typedef struct {
   int col;                /* nb col */
   Line *line;             /* screen */
   Line *alt;              /* alternate screen */
-  int *dirty;             /* dirtyness of lines */
+  bool *dirty;            /* dirtyness of lines */
   XftGlyphFontSpec *specbuf; /* font spec buffer used for rendering */
   TCursor c;              /* cursor */
   int top;                /* top    scroll limit */
   int bot;                /* bottom scroll limit */
-  int mode;               /* terminal mode flags */
-  int esc;                /* escape state flags */
-  char trantbl[4];        /* charset table translation */
+  enum term_mode mode;    /* terminal mode flags */
+  enum escape_state esc;  /* escape state flags */
+  enum charset trantbl[4]; /* charset table translation */
   int charset;            /* current charset */
   int icharset;           /* selected charset for sequence */
-  int numlock;            /* lock numbers in keyboard */
-  int *tabs;
+  bool numlock;           /* lock numbers in keyboard */
+  bool *tabs;
 } Term;
 
 /* Purely graphic info */
 typedef struct {
-  int tw, th; /* tty width and height */
-  int w, h;   /* window width and height */
-  int ch;     /* char height */
-  int cw;     /* char width  */
-  char state; /* focus, redraw, visible */
-  int cursor; /* cursor style */
+  int tw, th;              /* tty width and height */
+  int w, h;                /* window width and height */
+  int ch;                  /* char height */
+  int cw;                  /* char width  */
+  enum window_state state; /* focus, redraw, visible */
+  int cursor;              /* cursor style */
 } TermWindow;
 
 typedef struct {
@@ -139,9 +167,9 @@ typedef struct {
 } MouseShortcut;
 
 typedef struct {
-  int mode;
-  int type;
-  int snap;
+  enum selection_mode mode;
+  enum selection_type type;
+  enum selection_snap snap;
   /*
    * Selection variables:
    * nb – normalized coordinates of the beginning of the selection
@@ -154,7 +182,7 @@ typedef struct {
   } nb, ne, ob, oe;
 
   char *primary, *clipboard;
-  int alt;
+  bool alt;
   struct timespec tclick1;
   struct timespec tclick2;
 
@@ -178,11 +206,11 @@ typedef struct {
 void die(const char *, ...);
 void redraw(void);
 
-int tattrset(int);
+bool tattrset(int);
 void tnew(int, int);
 void tsetdirt(int, int);
 void tsetdirtattr(int);
-int match(uint, uint);
+bool match(uint, uint);
 void ttynew(void);
 size_t ttyread(void);
 void ttyresize(void);
@@ -197,7 +225,7 @@ void selclear(void);
 
 void selinit(void);
 void selnormalize(void);
-int selected(int, int);
+bool selected(int, int);
 char *getsel(void);
 int x2col(int);
 int y2row(int);
@@ -237,7 +265,7 @@ extern float cwscale;
 extern float chscale;
 extern unsigned int doubleclicktimeout;
 extern unsigned int tripleclicktimeout;
-extern int allowaltscreen;
+extern bool allowaltscreen;
 extern unsigned int xfps;
 extern unsigned int actionfps;
 extern unsigned int cursorthickness;
