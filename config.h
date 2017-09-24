@@ -1,6 +1,6 @@
 // Font specification in fontconfig format.
 // See http://freedesktop.org/software/fontconfig/fontconfig-user.html
-char font[] = "Roboto Mono for Powerline:size=9:antialias=true:autohint=true";
+char font[] = "RobotoMono Nerd Font:weight=Light:size=11:antialias=true:autohint=true";
 
 // Margin between window edges and console area.
 int borderpx = 2;
