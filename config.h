@@ -15,11 +15,6 @@ int borderpx = 2;
 static char shell[] = "/bin/sh";
 static char *utmp = NULL;
 
-// Base stty command for configuring an external tty line.
-// This is used when `-l device` is used instead of opening a pseudoterminal.
-// Any extra command-line arguments are appended.
-static char stty_args[] = "stty raw pass8 nl -echo -iexten -cstopb 38400";
-
 // Kerning / character bounding-box multipliers.
 float cwscale = 1.0;
 float chscale = 1.0;
