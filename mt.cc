@@ -604,9 +604,8 @@ void die(const char *errstr, ...) {
 }
 
 void execsh(void) {
-  char **args, *sh, *prog;
+  // Read user info from passwd file.
   const struct passwd *pw;
-
   errno = 0;
   if ((pw = getpwuid(getuid())) == NULL) {
     if (errno)
@@ -615,17 +614,29 @@ void execsh(void) {
       die("who are you?\n");
   }
 
-  if ((sh = getenv("SHELL")) == NULL)
-    sh = (pw->pw_shell[0]) ? pw->pw_shell : shell;
+  // Find user's preferred shell. This will become $SHELL.
+  char *sh;
+  if (shell != NULL) {
+    sh = shell;
+  } else if (char *env_shell = getenv("SHELL")) {
+    sh = env_shell;
+  } else if (pw->pw_shell[0]) {
+    sh = pw->pw_shell;
+  } else {
+    static char bin_sh[] = "/bin/sh";
+    sh = bin_sh;
+  }
 
-  if (opt_cmd)
-    prog = opt_cmd[0];
-  else if (utmp)
-    prog = utmp;
-  else
-    prog = sh;
-  char *prog_only[] = {prog, NULL};
-  args = (opt_cmd) ? opt_cmd : prog_only;
+  // The program to execute is the shell unless explicitly specified.
+  char *prog_only_args[2] = {NULL, NULL};
+  char **args;
+  if (opt_cmd) {
+    args = opt_cmd;
+  } else {
+    prog_only_args[0] = sh;
+    args = prog_only_args;
+  }
+  char *prog = args[0];
 
   unsetenv("COLUMNS");
   unsetenv("LINES");

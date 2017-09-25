@@ -8,12 +8,11 @@ int borderpx = 2;
 // Shell program to run when mt starts.
 // The following sources are consulted in order:
 //   1. program passed with -e
-//   2. the `utmp` option
+//   5. the `shell` option
 //   3. POSIX $SHELL environment variable
 //   4. user's shell in /etc/passwd
-//   5. the `shell` option
-static char shell[] = "/bin/sh";
-static char *utmp = NULL;
+//   5. /bin/sh
+static char *shell = NULL;
 
 // Kerning / character bounding-box multipliers.
 float cwscale = 1.0;
