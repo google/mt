@@ -1707,7 +1707,7 @@ void strhandle(void) {
     xsettitle(strescseq.args[0]);
     return;
   case 'P': /* DCS -- Device Control String */
-    term.mode |= ESC_DCS;
+    term.esc |= ESC_DCS;
   case '_': /* APC -- Application Program Command */
   case '^': /* PM -- Privacy Message */
     return;
