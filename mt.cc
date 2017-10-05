@@ -12,6 +12,7 @@
 #include <cstring>
 #include <ctime>
 #include <cwchar>
+#include <sstream>
 
 extern "C" {
 #include <X11/Xft/Xft.h>
@@ -44,17 +45,9 @@ char *argv0;
 
 /* Arbitrary sizes */
 #define UTF_INVALID 0xFFFD
-#define ESC_BUF_SIZ (128 * UTF_SIZ)
-#define ESC_ARG_SIZ 16
-#define STR_BUF_SIZ ESC_BUF_SIZ
-#define STR_ARG_SIZ ESC_ARG_SIZ
 
 /* macros */
 #define NUMMAXLEN(x) ((int)(sizeof(x) * 2.56 + 0.5) + 1)
-#define DEFAULT(a, b) (a) = (a) ? (a) : (b)
-#define ISCONTROLC0(c) (BETWEEN(c, 0, 0x1f) || (c) == '\177')
-#define ISCONTROLC1(c) (BETWEEN(c, 0x80, 0x9f))
-#define ISCONTROL(c) (ISCONTROLC0(c) || ISCONTROLC1(c))
 #define ISDELIM(u) (utf8strchr(worddelimiters, u) != NULL)
 
 /* constants */
@@ -77,38 +70,6 @@ enum charset {
   CS_GER,
   CS_FIN
 };
-
-enum escape_state {
-  ESC_START = 1,
-  ESC_CSI = 2,
-  ESC_STR = 4, /* OSC, PM, APC */
-  ESC_ALTCHARSET = 8,
-  ESC_STR_END = 16, /* a final string was encountered */
-  ESC_TEST = 32,    /* Enter in test mode */
-  ESC_UTF8 = 64,
-  ESC_DCS = 128,
-};
-
-/* CSI Escape sequence structs */
-/* ESC '[' [[ [<priv>] <arg> [;]] <mode> [<mode>]] */
-typedef struct {
-  char buf[ESC_BUF_SIZ]; /* raw string */
-  int len;               /* raw string length */
-  char priv;
-  int arg[ESC_ARG_SIZ];
-  int narg; /* nb of args */
-  char mode[2];
-} CSIEscape;
-
-/* STR Escape sequence structs */
-/* ESC type [[ [<priv>] <arg> [;]] <mode>] ESC '\' */
-typedef struct {
-  char type;             /* ESC type ... */
-  char buf[STR_BUF_SIZ]; /* raw string */
-  int len;               /* raw string length */
-  char *args[STR_ARG_SIZ];
-  int narg; /* nb of args */
-} STREscape;
 
 typedef struct {
   KeySym k;
@@ -140,16 +101,6 @@ static void sendbreak(const Arg *);
 static void execsh(void);
 static void sigchld(int);
 
-static void csidump(void);
-static void csihandle(void);
-static void csiparse(void);
-static void csireset(void);
-static int eschandle(uchar);
-static void strdump(void);
-static void strhandle(void);
-static void strparse(void);
-static void strreset(void);
-
 static void tprinter(const char *, size_t);
 static void tdumpsel(void);
 static void tdumpline(int);
@@ -170,19 +121,16 @@ static void treset(void);
 static void tresize(int, int);
 static void tscrollup(int, int);
 static void tscrolldown(int, int);
-static void tsetattr(int *, int);
+static void tsetattr(const std::vector<int>&);
 static void tsetchar(Rune, MTGlyph *, int, int);
 static void tsetscroll(int, int);
 static void tswapscreen(void);
-static void tsetmode(int, int, int *, int);
+static void tsetmode(int, int, const std::vector<int>&);
 static void tfulldirt(void);
 static void techo(Rune);
-static void tcontrolcode(uchar);
-static void tdectest(char);
-static void tdefutf8(char);
-static int32_t tdefcolor(int *, int *, int);
-static void tdeftran(char);
-static void tstrsequence(uchar);
+static void tdectest();
+static int32_t tdefcolor(const std::vector<int>&, int *);
+static void tdeftran(int, char);
 
 static void selscroll(int, int);
 static void selsnap(int *, int *, int);
@@ -211,8 +159,6 @@ char *opt_name = NULL;
 char *opt_title = NULL;
 int oldbutton = 3; /* button event on startup: 3 = release */
 
-static CSIEscape csiescseq;
-static STREscape strescseq;
 static int iofd = 1;
 
 char *usedfont = NULL;
@@ -731,7 +677,7 @@ size_t ttyread(void) {
   ptr = buf;
 
   for (;;) {
-    if (IS_SET(MODE_UTF8) && !IS_SET(MODE_SIXEL)) {
+    if (IS_SET(MODE_UTF8)) {
       /* process a complete utf8 char */
       charsize = utf8decode(ptr, &unicodep, buflen);
       if (charsize == 0)
@@ -820,7 +766,7 @@ void ttysend(const char *s, size_t n) {
 
   lim = &s[n];
   for (t = s; t < lim; t += len) {
-    if (IS_SET(MODE_UTF8) && !IS_SET(MODE_SIXEL)) {
+    if (IS_SET(MODE_UTF8)) {
       len = utf8decode(t, &u, n);
     } else {
       u = *t & 0xFF;
@@ -920,7 +866,9 @@ void treset(void) {
 }
 
 void tnew(int col, int row) {
-  term = {};
+  // TODO: instead of (re-)initializing a global, this should be a constructor.
+  term.~Term();
+  new (&term) Term();
   term.c.attr = {/* rune */ 0, ATTR_NULL, defaultfg, defaultbg};
   tresize(col, row);
   term.numlock = 1;
@@ -1010,34 +958,6 @@ void tnewline(int first_col) {
     y++;
   }
   tmoveto(first_col ? 0 : term.c.x, y);
-}
-
-void csiparse(void) {
-  char *p = csiescseq.buf, *np;
-  long int v;
-
-  csiescseq.narg = 0;
-  if (*p == '?') {
-    csiescseq.priv = 1;
-    p++;
-  }
-
-  csiescseq.buf[csiescseq.len] = '\0';
-  while (p < csiescseq.buf + csiescseq.len) {
-    np = NULL;
-    v = strtol(p, &np, 10);
-    if (np == p)
-      v = 0;
-    if (v == LONG_MAX || v == LONG_MIN)
-      v = -1;
-    csiescseq.arg[csiescseq.narg++] = v;
-    p = np;
-    if (*p != ';' || csiescseq.narg == ESC_ARG_SIZ)
-      break;
-    p++;
-  }
-  csiescseq.mode[0] = *p++;
-  csiescseq.mode[1] = (p < csiescseq.buf + csiescseq.len) ? *p : '\0';
 }
 
 /* for absolute user moves, when decom is set */
@@ -1163,15 +1083,15 @@ void tdeleteline(int n) {
     tscrollup(term.c.y, n);
 }
 
-int32_t tdefcolor(int *attr, int *npar, int l) {
+int32_t tdefcolor(const std::vector<int>& attr, int *npar) {
   int32_t idx = -1;
   uint r, g, b;
 
   switch (attr[*npar + 1]) {
   case 2: /* direct color in RGB space */
-    if (*npar + 4 >= l) {
+    if (*npar + 4 >= attr.size()) {
       fprintf(stderr, "erresc(38): Incorrect number of parameters (%d)\n",
-              *npar);
+          *npar);
       break;
     }
     r = attr[*npar + 2];
@@ -1184,9 +1104,9 @@ int32_t tdefcolor(int *attr, int *npar, int l) {
       idx = TRUECOLOR(r, g, b);
     break;
   case 5: /* indexed color */
-    if (*npar + 2 >= l) {
+    if (*npar + 2 >= attr.size()) {
       fprintf(stderr, "erresc(38): Incorrect number of parameters (%d)\n",
-              *npar);
+          *npar);
       break;
     }
     *npar += 2;
@@ -1207,15 +1127,15 @@ int32_t tdefcolor(int *attr, int *npar, int l) {
   return idx;
 }
 
-void tsetattr(int *attr, int l) {
+void tsetattr(const std::vector<int>& attr) {
   int i;
   int32_t idx;
 
-  for (i = 0; i < l; i++) {
+  for (i = 0; i < attr.size(); i++) {
     switch (attr[i]) {
     case 0:
       term.c.attr.mode &=
-          ~(ATTR_BOLD | ATTR_FAINT | ATTR_ITALIC | ATTR_UNDERLINE | ATTR_BLINK |
+        ~(ATTR_BOLD | ATTR_FAINT | ATTR_ITALIC | ATTR_UNDERLINE | ATTR_BLINK |
             ATTR_REVERSE | ATTR_INVISIBLE | ATTR_STRUCK);
       term.c.attr.fg = defaultfg;
       term.c.attr.bg = defaultbg;
@@ -1233,7 +1153,7 @@ void tsetattr(int *attr, int l) {
       term.c.attr.mode |= ATTR_UNDERLINE;
       break;
     case 5: /* slow blink */
-            /* FALLTHROUGH */
+    /* FALLTHROUGH */
     case 6: /* rapid blink */
       term.c.attr.mode |= ATTR_BLINK;
       break;
@@ -1268,14 +1188,14 @@ void tsetattr(int *attr, int l) {
       term.c.attr.mode &= ~ATTR_STRUCK;
       break;
     case 38:
-      if ((idx = tdefcolor(attr, &i, l)) >= 0)
+      if ((idx = tdefcolor(attr, &i)) >= 0)
         term.c.attr.fg = idx;
       break;
     case 39:
       term.c.attr.fg = defaultfg;
       break;
     case 48:
-      if ((idx = tdefcolor(attr, &i, l)) >= 0)
+      if ((idx = tdefcolor(attr, &i)) >= 0)
         term.c.attr.bg = idx;
       break;
     case 49:
@@ -1291,8 +1211,7 @@ void tsetattr(int *attr, int l) {
       } else if (BETWEEN(attr[i], 100, 107)) {
         term.c.attr.bg = attr[i] - 100 + 8;
       } else {
-        fprintf(stderr, "erresc(default): gfx attr %d unknown\n", attr[i]),
-            csidump();
+        fprintf(stderr, "erresc(default): gfx attr %d unknown\n", attr[i]);
       }
       break;
     }
@@ -1313,13 +1232,13 @@ void tsetscroll(int t, int b) {
   term.bot = b;
 }
 
-void tsetmode(int priv, int set, int *args, int narg) {
-  int *lim, mode;
+void tsetmode(int priv, int set, const std::vector<int>& args) {
+  int mode;
   int alt;
 
-  for (lim = args + narg; args < lim; ++args) {
+  for (int arg : args) {
     if (priv) {
-      switch (*args) {
+      switch (arg) {
       case 1: /* DECCKM -- Cursor key */
         MODBIT(term.mode, set, MODE_APPCURSOR);
         break;
@@ -1393,9 +1312,9 @@ void tsetmode(int priv, int set, int *args, int narg) {
         }
         if (set ^ alt) /* set is always 1 or 0 */
           tswapscreen();
-        if (*args != 1049)
+        if (arg != 1049)
           break;
-      /* FALLTHROUGH */
+        /* FALLTHROUGH */
       case 1048:
         tcursor((set) ? CURSOR_SAVE : CURSOR_LOAD);
         break;
@@ -1412,11 +1331,11 @@ void tsetmode(int priv, int set, int *args, int narg) {
                     and can be mistaken for other control
                     codes. */
       default:
-        fprintf(stderr, "erresc: unknown private set/reset mode %d\n", *args);
+        fprintf(stderr, "erresc: unknown private set/reset mode %d\n", arg);
         break;
       }
     } else {
-      switch (*args) {
+      switch (arg) {
       case 0: /* Error (IGNORED) */
         break;
       case 2: /* KAM -- keyboard action */
@@ -1432,279 +1351,197 @@ void tsetmode(int priv, int set, int *args, int narg) {
         MODBIT(term.mode, set, MODE_CRLF);
         break;
       default:
-        fprintf(stderr, "erresc: unknown set/reset mode %d\n", *args);
+        fprintf(stderr, "erresc: unknown set/reset mode %d\n", arg);
         break;
       }
     }
   }
 }
 
-void csihandle(void) {
+void Term::CSI(const std::string& command, const std::vector<int>& args) {
+  auto arg = [&](int index, int default_value) {
+    // The default value is used even if the param is explicitly zero!
+    return (index < args.size() && args[index]) ? args[index] : default_value;
+  };
+
   char buf[40];
   int len;
 
-  switch (csiescseq.mode[0]) {
-  default:
-  unknown:
-    fprintf(stderr, "erresc: unknown csi ");
-    csidump();
-    /* die(""); */
-    break;
+  if (command.size() == 1) switch (command[0]) {
   case '@': /* ICH -- Insert <n> blank char */
-    DEFAULT(csiescseq.arg[0], 1);
-    tinsertblank(csiescseq.arg[0]);
-    break;
+    return tinsertblank(arg(0, 1));
   case 'A': /* CUU -- Cursor <n> Up */
-    DEFAULT(csiescseq.arg[0], 1);
-    tmoveto(term.c.x, term.c.y - csiescseq.arg[0]);
-    break;
+    return tmoveto(term.c.x, term.c.y - arg(0, 1));
   case 'B': /* CUD -- Cursor <n> Down */
   case 'e': /* VPR --Cursor <n> Down */
-    DEFAULT(csiescseq.arg[0], 1);
-    tmoveto(term.c.x, term.c.y + csiescseq.arg[0]);
-    break;
+    return tmoveto(term.c.x, term.c.y + arg(0, 1));
   case 'i': /* MC -- Media Copy */
-    switch (csiescseq.arg[0]) {
+    switch (arg(0, 0)) {
     case 0:
-      tdump();
-      break;
+      return tdump();
     case 1:
-      tdumpline(term.c.y);
-      break;
+      return tdumpline(term.c.y);
     case 2:
-      tdumpsel();
-      break;
+      return tdumpsel();
     case 4:
       term.mode &= ~MODE_PRINT;
-      break;
+      return;
     case 5:
       term.mode |= MODE_PRINT;
-      break;
+      return;
     }
     break;
   case 'c': /* DA -- Device Attributes */
-    if (csiescseq.arg[0] == 0)
+    if (arg(0, 0)  == 0)
       ttywrite(vt102_identify, strlen(vt102_identify));
-    break;
+    return;
   case 'C': /* CUF -- Cursor <n> Forward */
   case 'a': /* HPR -- Cursor <n> Forward */
-    DEFAULT(csiescseq.arg[0], 1);
-    tmoveto(term.c.x + csiescseq.arg[0], term.c.y);
-    break;
+    return tmoveto(term.c.x + arg(0, 1), term.c.y);
   case 'D': /* CUB -- Cursor <n> Backward */
-    DEFAULT(csiescseq.arg[0], 1);
-    tmoveto(term.c.x - csiescseq.arg[0], term.c.y);
-    break;
+    return tmoveto(term.c.x - arg(0, 1), term.c.y);
   case 'E': /* CNL -- Cursor <n> Down and first col */
-    DEFAULT(csiescseq.arg[0], 1);
-    tmoveto(0, term.c.y + csiescseq.arg[0]);
-    break;
+    return tmoveto(0, term.c.y + arg(0, 1));
   case 'F': /* CPL -- Cursor <n> Up and first col */
-    DEFAULT(csiescseq.arg[0], 1);
-    tmoveto(0, term.c.y - csiescseq.arg[0]);
-    break;
+    return tmoveto(0, term.c.y - arg(0, 1));
   case 'g': /* TBC -- Tabulation clear */
-    switch (csiescseq.arg[0]) {
+    switch (arg(0, 0)) {
     case 0: /* clear current tab stop */
       term.tabs[term.c.x] = 0;
-      break;
+      return;
     case 3: /* clear all the tabs */
       memset(term.tabs, 0, term.col * sizeof(*term.tabs));
-      break;
-    default:
-      goto unknown;
+      return;
     }
     break;
   case 'G': /* CHA -- Move to <col> */
   case '`': /* HPA */
-    DEFAULT(csiescseq.arg[0], 1);
-    tmoveto(csiescseq.arg[0] - 1, term.c.y);
-    break;
+    return tmoveto(arg(0, 1) - 1, term.c.y);
   case 'H': /* CUP -- Move to <row> <col> */
   case 'f': /* HVP */
-    DEFAULT(csiescseq.arg[0], 1);
-    DEFAULT(csiescseq.arg[1], 1);
-    tmoveato(csiescseq.arg[1] - 1, csiescseq.arg[0] - 1);
-    break;
+    return tmoveato(arg(1, 1) - 1, arg(0, 1) - 1);
   case 'I': /* CHT -- Cursor Forward Tabulation <n> tab stops */
-    DEFAULT(csiescseq.arg[0], 1);
-    tputtab(csiescseq.arg[0]);
-    break;
+    return tputtab(arg(0, 1));
   case 'J': /* ED -- Clear screen */
     selclear();
-    switch (csiescseq.arg[0]) {
+    switch (arg(0, 0)) {
     case 0: /* below */
       tclearregion(term.c.x, term.c.y, term.col - 1, term.c.y);
       if (term.c.y < term.row - 1) {
         tclearregion(0, term.c.y + 1, term.col - 1, term.row - 1);
       }
-      break;
+      return;
     case 1: /* above */
       if (term.c.y > 1)
         tclearregion(0, 0, term.col - 1, term.c.y - 1);
-      tclearregion(0, term.c.y, term.c.x, term.c.y);
-      break;
+      return tclearregion(0, term.c.y, term.c.x, term.c.y);
     case 2: /* all */
-      tclearregion(0, 0, term.col - 1, term.row - 1);
-      break;
-    default:
-      goto unknown;
+      return tclearregion(0, 0, term.col - 1, term.row - 1);
     }
     break;
   case 'K': /* EL -- Clear line */
-    switch (csiescseq.arg[0]) {
+    switch (arg(0, 0)) {
     case 0: /* right */
-      tclearregion(term.c.x, term.c.y, term.col - 1, term.c.y);
-      break;
+      return tclearregion(term.c.x, term.c.y, term.col - 1, term.c.y);
     case 1: /* left */
-      tclearregion(0, term.c.y, term.c.x, term.c.y);
-      break;
+      return tclearregion(0, term.c.y, term.c.x, term.c.y);
     case 2: /* all */
-      tclearregion(0, term.c.y, term.col - 1, term.c.y);
-      break;
+      return tclearregion(0, term.c.y, term.col - 1, term.c.y);
     }
     break;
   case 'S': /* SU -- Scroll <n> line up */
-    DEFAULT(csiescseq.arg[0], 1);
-    tscrollup(term.top, csiescseq.arg[0]);
-    break;
+    return tscrollup(term.top, arg(0, 1));
   case 'T': /* SD -- Scroll <n> line down */
-    DEFAULT(csiescseq.arg[0], 1);
-    tscrolldown(term.top, csiescseq.arg[0]);
-    break;
+    return tscrolldown(term.top, arg(0, 1));
   case 'L': /* IL -- Insert <n> blank lines */
-    DEFAULT(csiescseq.arg[0], 1);
-    tinsertblankline(csiescseq.arg[0]);
-    break;
+    return tinsertblankline(arg(0, 1));
   case 'l': /* RM -- Reset Mode */
-    tsetmode(csiescseq.priv, 0, csiescseq.arg, csiescseq.narg);
-    break;
+    return tsetmode(false, 0, args);
   case 'M': /* DL -- Delete <n> lines */
-    DEFAULT(csiescseq.arg[0], 1);
-    tdeleteline(csiescseq.arg[0]);
-    break;
+    return tdeleteline(arg(0, 1));
   case 'X': /* ECH -- Erase <n> char */
-    DEFAULT(csiescseq.arg[0], 1);
-    tclearregion(term.c.x, term.c.y, term.c.x + csiescseq.arg[0] - 1, term.c.y);
-    break;
+    return tclearregion(term.c.x, term.c.y, term.c.x + arg(0, 1) - 1, term.c.y);
   case 'P': /* DCH -- Delete <n> char */
-    DEFAULT(csiescseq.arg[0], 1);
-    tdeletechar(csiescseq.arg[0]);
-    break;
+    return tdeletechar(arg(0, 1));
   case 'Z': /* CBT -- Cursor Backward Tabulation <n> tab stops */
-    DEFAULT(csiescseq.arg[0], 1);
-    tputtab(-csiescseq.arg[0]);
-    break;
+    return tputtab(-arg(0, 1));
   case 'd': /* VPA -- Move to <row> */
-    DEFAULT(csiescseq.arg[0], 1);
-    tmoveato(term.c.x, csiescseq.arg[0] - 1);
-    break;
+    return tmoveato(term.c.x, arg(0, 1) - 1);
   case 'h': /* SM -- Set terminal mode */
-    tsetmode(csiescseq.priv, 1, csiescseq.arg, csiescseq.narg);
-    break;
+    return tsetmode(false, 1, args);
   case 'm': /* SGR -- Terminal attribute (color) */
-    tsetattr(csiescseq.arg, csiescseq.narg);
-    break;
+    return args.empty() ? tsetattr({0}) : tsetattr(args);
   case 'n': /* DSR – Device Status Report (cursor position) */
-    if (csiescseq.arg[0] == 6) {
+    if (arg(0, 0) == 6) {
       len =
           snprintf(buf, sizeof(buf), "\033[%i;%iR", term.c.y + 1, term.c.x + 1);
       ttywrite(buf, len);
     }
-    break;
+    return;
   case 'r': /* DECSTBM -- Set Scrolling Region */
-    if (csiescseq.priv) {
-      goto unknown;
-    } else {
-      DEFAULT(csiescseq.arg[0], 1);
-      DEFAULT(csiescseq.arg[1], term.row);
-      tsetscroll(csiescseq.arg[0] - 1, csiescseq.arg[1] - 1);
-      tmoveato(0, 0);
-    }
-    break;
+    tsetscroll(arg(0, 1) - 1, arg(1, term.row) - 1);
+    tmoveato(0, 0);
+    return;
   case 's': /* DECSC -- Save cursor position (ANSI.SYS) */
-    tcursor(CURSOR_SAVE);
-    break;
+    return tcursor(CURSOR_SAVE);
   case 'u': /* DECRC -- Restore cursor position (ANSI.SYS) */
-    tcursor(CURSOR_LOAD);
-    break;
-  case ' ':
-    switch (csiescseq.mode[1]) {
-    case 'q': /* DECSCUSR -- Set Cursor Style */
-      DEFAULT(csiescseq.arg[0], 1);
-      if (!BETWEEN(csiescseq.arg[0], 0, 6)) {
-        goto unknown;
-      }
-      win.cursor = csiescseq.arg[0];
-      break;
-    default:
-      goto unknown;
-    }
-    break;
+    return tcursor(CURSOR_LOAD);
   }
-}
-
-void csidump(void) {
-  int i;
-  uint c;
-
-  fprintf(stderr, "ESC[");
-  for (i = 0; i < csiescseq.len; i++) {
-    c = csiescseq.buf[i] & 0xff;
-    if (isprint(c)) {
-      putc(c, stderr);
-    } else if (c == '\n') {
-      fprintf(stderr, "(\\n)");
-    } else if (c == '\r') {
-      fprintf(stderr, "(\\r)");
-    } else if (c == 0x1b) {
-      fprintf(stderr, "(\\e)");
-    } else {
-      fprintf(stderr, "(%02x)", c);
+  if (command == " q") { /* DECSCUSR -- Set Cursor Style */
+    if (BETWEEN(arg(0, 1), 0, 6)) {
+      win.cursor = arg(0, 1);
+      return;
     }
   }
-  putc('\n', stderr);
+  if (command == "?l") {
+    return tsetmode(true, 0, args);
+  }
+  if (command == "?h") {
+    return tsetmode(true, 1, args);
+  }
+
+  DebugActions().CSI(command, args);
 }
 
-void csireset(void) { memset(&csiescseq, 0, sizeof(csiescseq)); }
+void Term::SetTitle(const std::string& payload) {
+  xsettitle(payload.c_str());
+}
 
-void strhandle(void) {
-  char *p = NULL;
-  int j, narg, par;
+void Term::OSC(const std::string& command) {
+  // Commands are semicolon-delimited args.
+  std::stringstream ss(command);
+  std::vector<std::string> args;
+  std::string arg;
+  while (std::getline(ss, arg, ';')) args.push_back(std::move(arg));
 
-  term.esc &= ~(ESC_STR_END | ESC_STR);
-  strparse();
-  par = (narg = strescseq.narg) ? atoi(strescseq.args[0]) : 0;
-
-  switch (strescseq.type) {
-  case ']': /* OSC -- Operating System Command */
-    switch (par) {
+  const char* p = nullptr;
+  if (args.size() > 0) switch (atoi(args[0].c_str())) {
     case 0:
     case 1:
     case 2:
-      if (narg > 1)
-        xsettitle(strescseq.args[1]);
-      return;
+      if (args.size() > 1) return SetTitle(args[1]);
+      break;
     case 52:
-      if (narg > 2) {
+      if (args.size() > 2) {
         char *dec;
 
-        dec = base64dec(strescseq.args[2]);
+        dec = base64dec(args[2].c_str());
         if (dec) {
           xsetsel(dec, CurrentTime);
           clipcopy(NULL);
         } else {
           fprintf(stderr, "erresc: invalid base64\n");
         }
+        return;
       }
-      return;
+      break;
     case 4: /* color set */
-      if (narg < 3)
+      if (args.size() < 3)
         break;
-      p = strescseq.args[2];
+      p = args[2].c_str();
     /* FALLTHROUGH */
     case 104: /* color reset, here p = NULL */
-      j = (narg > 1) ? atoi(strescseq.args[1]) : -1;
+      int j = (args.size() > 1) ? atoi(args[1].c_str()) : -1;
       if (xsetcolorname(j, p)) {
         fprintf(stderr, "erresc: invalid color %s\n", p);
       } else {
@@ -1715,68 +1552,9 @@ void strhandle(void) {
         redraw();
       }
       return;
-    }
-    break;
-  case 'k': /* old title set compatibility */
-    xsettitle(strescseq.args[0]);
-    return;
-  case 'P': /* DCS -- Device Control String */
-    term.esc |= ESC_DCS;
-  case '_': /* APC -- Application Program Command */
-  case '^': /* PM -- Privacy Message */
-    return;
   }
-
-  fprintf(stderr, "erresc: unknown str ");
-  strdump();
+  DebugActions().OSC(command);
 }
-
-void strparse(void) {
-  int c;
-  char *p = strescseq.buf;
-
-  strescseq.narg = 0;
-  strescseq.buf[strescseq.len] = '\0';
-
-  if (*p == '\0')
-    return;
-
-  while (strescseq.narg < STR_ARG_SIZ) {
-    strescseq.args[strescseq.narg++] = p;
-    while ((c = *p) != ';' && c != '\0')
-      ++p;
-    if (c == '\0')
-      return;
-    *p++ = '\0';
-  }
-}
-
-void strdump(void) {
-  int i;
-  uint c;
-
-  fprintf(stderr, "ESC%c", strescseq.type);
-  for (i = 0; i < strescseq.len; i++) {
-    c = strescseq.buf[i] & 0xff;
-    if (c == '\0') {
-      putc('\n', stderr);
-      return;
-    } else if (isprint(c)) {
-      putc(c, stderr);
-    } else if (c == '\n') {
-      fprintf(stderr, "(\\n)");
-    } else if (c == '\r') {
-      fprintf(stderr, "(\\r)");
-    } else if (c == 0x1b) {
-      fprintf(stderr, "(\\e)");
-    } else {
-      fprintf(stderr, "(%02x)", c);
-    }
-  }
-  fprintf(stderr, "ESC\\\n");
-}
-
-void strreset(void) { memset(&strescseq, 0, sizeof(strescseq)); }
 
 void sendbreak(const Arg *arg) {
   if (tcsendbreak(cmdfd, 0))
@@ -1864,27 +1642,22 @@ void tputtab(int n) {
 }
 
 void techo(Rune u) {
-  if (ISCONTROL(u)) { /* control code */
-    if (u & 0x80) {
-      u &= 0x7f;
-      tputc('^');
-      tputc('[');
-    } else if (u != '\n' && u != '\r' && u != '\t') {
-      u ^= 0x40;
-      tputc('^');
-    }
+  if (BETWEEN(u, 0, 0x1f) && u != '\n' && u != '\r' && u != '\t') {
+    tputc('^');
+    tputc(u | 0x40);
+  } else if (BETWEEN(u, 0x80, 0x9f)) {
+    tputc('^');
+    tputc('[');
+    tputc(u & 0x7f);
+  } else if (u == 0x7f) {
+    tputc('^');
+    tputc(0x3f);
+  } else {
+    tputc(u);
   }
-  tputc(u);
 }
 
-void tdefutf8(char ascii) {
-  if (ascii == 'G')
-    term.mode |= MODE_UTF8;
-  else if (ascii == '@')
-    term.mode &= ~MODE_UTF8;
-}
-
-void tdeftran(char ascii) {
+void tdeftran(int icharset, char ascii) {
   static char cs[] = "0B";
   static int vcs[] = {CS_GRAPHIC0, CS_USA};
   char *p;
@@ -1892,44 +1665,18 @@ void tdeftran(char ascii) {
   if ((p = strchr(cs, ascii)) == NULL) {
     fprintf(stderr, "esc unhandled charset: ESC ( %c\n", ascii);
   } else {
-    term.trantbl[term.icharset] = vcs[p - cs];
+    term.trantbl[icharset] = vcs[p - cs];
   }
 }
 
-void tdectest(char c) {
-  int x, y;
-
-  if (c == '8') { /* DEC screen alignment test. */
-    for (x = 0; x < term.col; ++x) {
-      for (y = 0; y < term.row; ++y)
-        tsetchar('E', &term.c.attr, x, y);
-    }
+void tdectest() {
+  for (int x = 0; x < term.col; ++x) {
+    for (int y = 0; y < term.row; ++y)
+      tsetchar('E', &term.c.attr, x, y);
   }
 }
 
-void tstrsequence(uchar c) {
-  strreset();
-
-  switch (c) {
-  case 0x90: /* DCS -- Device Control String */
-    c = 'P';
-    term.esc |= ESC_DCS;
-    break;
-  case 0x9f: /* APC -- Application Program Command */
-    c = '_';
-    break;
-  case 0x9e: /* PM -- Privacy Message */
-    c = '^';
-    break;
-  case 0x9d: /* OSC -- Operating System Command */
-    c = ']';
-    break;
-  }
-  strescseq.type = c;
-  term.esc |= ESC_STR;
-}
-
-void tcontrolcode(uchar ascii) {
+void Term::Control(uint8_t ascii) {
   switch (ascii) {
   case '\t': /* HT */
     tputtab(1);
@@ -1947,20 +1694,10 @@ void tcontrolcode(uchar ascii) {
     tnewline(IS_SET(MODE_CRLF));
     return;
   case '\a': /* BEL */
-    if (term.esc & ESC_STR_END) {
-      /* backwards compatibility to xterm */
-      strhandle();
-    } else {
-      if (!(win.state & WIN_FOCUSED))
-        xseturgency(1);
-      if (bell)
-        xbell();
-    }
-    break;
-  case '\033': /* ESC */
-    csireset();
-    term.esc &= ~(ESC_CSI | ESC_ALTCHARSET | ESC_TEST);
-    term.esc |= ESC_START;
+    if (!(win.state & WIN_FOCUSED))
+      xseturgency(1);
+    if (bell)
+      xbell();
     return;
   case '\016': /* SO (LS1 -- Locking shift 1) */
   case '\017': /* SI (LS0 -- Locking shift 0) */
@@ -1968,14 +1705,10 @@ void tcontrolcode(uchar ascii) {
     return;
   case '\032': /* SUB */
     tsetchar('?', &term.c.attr, term.c.x, term.c.y);
-  case '\030': /* CAN */
-    csireset();
-    break;
   case '\005': /* ENQ (IGNORED) */
   case '\000': /* NUL (IGNORED) */
   case '\021': /* XON (IGNORED) */
   case '\023': /* XOFF (IGNORED) */
-  case 0177:   /* DEL (IGNORED) */
     return;
   case 0x80: /* TODO: PAD */
   case 0x81: /* TODO: HOP */
@@ -2006,223 +1739,118 @@ void tcontrolcode(uchar ascii) {
   case 0x95: /* TODO: MW */
   case 0x96: /* TODO: SPA */
   case 0x97: /* TODO: EPA */
-  case 0x98: /* TODO: SOS */
   case 0x99: /* TODO: SGCI */
-    break;
+    return;
   case 0x9a: /* DECID -- Identify Terminal */
     ttywrite(vt102_identify, strlen(vt102_identify));
-    break;
-  case 0x9b: /* TODO: CSI */
+    return;
   case 0x9c: /* TODO: ST */
-    break;
-  case 0x90: /* DCS -- Device Control String */
-  case 0x9d: /* OSC -- Operating System Command */
-  case 0x9e: /* PM -- Privacy Message */
-  case 0x9f: /* APC -- Application Program Command */
-    tstrsequence(ascii);
     return;
   }
-  /* only CAN, SUB, \a and C1 chars interrupt a sequence */
-  term.esc &= ~(ESC_STR_END | ESC_STR);
+  DebugActions().Control(ascii);
+}
+
+void Term::DCS(const std::string& command, const std::vector<int>& args, const std::string& payload) {
+  if (command == "q") {
+    fprintf(stderr, "Ignoring sixel image\n");
+    return;
+  }
+  DebugActions().DCS(command, args, payload);
 }
 
 /*
  * returns 1 when the sequence is finished and it hasn't to read
  * more characters for this sequence, otherwise 0
  */
-int eschandle(uchar ascii) {
-  switch (ascii) {
-  case '[':
-    term.esc |= ESC_CSI;
-    return 0;
-  case '#':
-    term.esc |= ESC_TEST;
-    return 0;
-  case '%':
-    term.esc |= ESC_UTF8;
-    return 0;
-  case 'P': /* DCS -- Device Control String */
-  case '_': /* APC -- Application Program Command */
-  case '^': /* PM -- Privacy Message */
-  case ']': /* OSC -- Operating System Command */
-  case 'k': /* old title set compatibility */
-    tstrsequence(ascii);
-    return 0;
+void Term::Escape(const std::string& command) {
+  if (command.size() == 1) switch (command[0]) {
   case 'n': /* LS2 -- Locking shift 2 */
+    term.charset = 2;
+    return;
   case 'o': /* LS3 -- Locking shift 3 */
-    term.charset = 2 + (ascii - 'n');
-    break;
-  case '(': /* GZD4 -- set primary charset G0 */
-  case ')': /* G1D4 -- set secondary charset G1 */
-  case '*': /* G2D4 -- set tertiary charset G2 */
-  case '+': /* G3D4 -- set quaternary charset G3 */
-    term.icharset = ascii - '(';
-    term.esc |= ESC_ALTCHARSET;
-    return 0;
+    term.charset = 3;
+    return;
   case 'D': /* IND -- Linefeed */
     if (term.c.y == term.bot) {
       tscrollup(term.top, 1);
     } else {
       tmoveto(term.c.x, term.c.y + 1);
     }
-    break;
+    return;
   case 'E':      /* NEL -- Next line */
     tnewline(1); /* always go to first col */
-    break;
+    return;
   case 'H': /* HTS -- Horizontal tab stop */
     term.tabs[term.c.x] = 1;
-    break;
+    return;
   case 'M': /* RI -- Reverse index */
     if (term.c.y == term.top) {
       tscrolldown(term.top, 1);
     } else {
       tmoveto(term.c.x, term.c.y - 1);
     }
-    break;
+    return;
   case 'Z': /* DECID -- Identify Terminal */
     ttywrite(vt102_identify, strlen(vt102_identify));
-    break;
+    return;
   case 'c': /* RIS -- Reset to inital state */
     treset();
     resettitle();
     xloadcols();
-    break;
+    return;
   case '=': /* DECPAM -- Application keypad */
     term.mode |= MODE_APPKEYPAD;
-    break;
+    return;
   case '>': /* DECPNM -- Normal keypad */
     term.mode &= ~MODE_APPKEYPAD;
-    break;
+    return;
   case '7': /* DECSC -- Save Cursor */
     tcursor(CURSOR_SAVE);
-    break;
+    return;
   case '8': /* DECRC -- Restore Cursor */
     tcursor(CURSOR_LOAD);
-    break;
-  case '\\': /* ST -- String Terminator */
-    if (term.esc & ESC_STR_END)
-      strhandle();
-    break;
-  default:
-    fprintf(stderr, "erresc: unknown sequence ESC 0x%02X '%c'\n", (uchar)ascii,
-            isprint(ascii) ? ascii : '.');
-    break;
+    return;
   }
-  return 1;
+
+  if (command == "#8") return tdectest();
+  if (command == "%G") {
+    term.mode |= MODE_UTF8;
+    return;
+  }
+  if (command == "%@") {
+    term.mode &= ~MODE_UTF8;
+    return;
+  }
+  if (command.size() == 2 && command[0] >= '(' && command[0] <= '+') {
+    return tdeftran(command[0] - '(', command[1]);
+  }
+
+  DebugActions().Escape(command);
 }
 
 void tputc(Rune u) {
-  char c[UTF_SIZ];
-  int control;
-  int width, len;
-  MTGlyph *gp;
-
-  control = ISCONTROL(u);
-  if (!IS_SET(MODE_UTF8) && !IS_SET(MODE_SIXEL)) {
-    c[0] = u;
-    width = len = 1;
-  } else {
-    len = utf8encode(u, c);
-    if (!control && (width = wcwidth(u)) == -1) {
-      memcpy(c, "\357\277\275", 4); /* UTF_INVALID */
-      width = 1;
-    }
-  }
-
-  if (IS_SET(MODE_PRINT))
-    tprinter(c, len);
-
-  /*
-   * STR sequence must be checked before anything else
-   * because it uses all following characters until it
-   * receives a ESC, a SUB, a ST or any other C1 control
-   * character.
-   */
-  if (term.esc & ESC_STR) {
-    if (u == '\a' || u == 030 || u == 032 || u == 033 || ISCONTROLC1(u)) {
-      term.esc &= ~(ESC_START | ESC_STR | ESC_DCS);
-      if (IS_SET(MODE_SIXEL)) {
-        /* TODO: render sixel */;
-        term.mode &= ~MODE_SIXEL;
-        return;
-      }
-      term.esc |= ESC_STR_END;
-      goto check_control_code;
-    }
-
-    if (IS_SET(MODE_SIXEL)) {
-      /* TODO: implement sixel mode */
-      return;
-    }
-    if (term.esc & ESC_DCS && strescseq.len == 0 && u == 'q')
-      term.mode |= MODE_SIXEL;
-
-    if (strescseq.len + len >= sizeof(strescseq.buf) - 1) {
-      /*
-       * Here is a bug in terminals. If the user never sends
-       * some code to stop the str or esc command, then st
-       * will stop responding. But this is better than
-       * silently failing with unknown characters. At least
-       * then users will report back.
-       *
-       * In the case users ever get fixed, here is the code:
-       */
-      /*
-       * term.esc = 0;
-       * strhandle();
-       */
-      return;
-    }
-
-    memmove(&strescseq.buf[strescseq.len], c, len);
-    strescseq.len += len;
-    return;
-  }
-
-check_control_code:
-  /*
-   * Actions of control codes must be performed as soon they arrive
-   * because they can be embedded inside a control sequence, and
-   * they must not cause conflicts with sequences.
-   */
-  if (control) {
-    tcontrolcode(u);
-    /*
-     * control codes are not shown ever
-     */
-    return;
-  } else if (term.esc & ESC_START) {
-    if (term.esc & ESC_CSI) {
-      csiescseq.buf[csiescseq.len++] = u;
-      if (BETWEEN(u, 0x40, 0x7E) ||
-          csiescseq.len >= sizeof(csiescseq.buf) - 1) {
-        term.esc = 0;
-        csiparse();
-        csihandle();
-      }
-      return;
-    } else if (term.esc & ESC_UTF8) {
-      tdefutf8(u);
-    } else if (term.esc & ESC_ALTCHARSET) {
-      tdeftran(u);
-    } else if (term.esc & ESC_TEST) {
-      tdectest(u);
+  if (IS_SET(MODE_PRINT)) {
+    if (IS_SET(MODE_UTF8)) {
+      char c[UTF_SIZ];
+      tprinter(c, utf8encode(u, c));
     } else {
-      if (!eschandle(u))
-        return;
-      /* sequence already finished */
+      char c = u;
+      tprinter(&c, 1);
     }
-    term.esc = 0;
-    /*
-     * All characters which form part of a sequence are not
-     * printed
-     */
-    return;
   }
+  if (term.escape.Consume(u)) return;
+  if (u == 0x7f) return;
+
+  int width = 1;
+  if (IS_SET(MODE_UTF8)) {
+    width = wcwidth(u);
+    if (width == -1) width = 1;
+  }
+
   if (sel.ob.x != -1 && BETWEEN(term.c.y, sel.ob.y, sel.oe.y))
     selclear();
 
-  gp = &term.line[term.c.y][term.c.x];
+  MTGlyph* gp = &term.line[term.c.y][term.c.x];
   if (IS_SET(MODE_WRAP) && (term.c.state & CURSOR_WRAPNEXT)) {
     gp->mode |= ATTR_WRAP;
     tnewline(1);
