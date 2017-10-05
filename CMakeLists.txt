@@ -15,7 +15,7 @@ include_directories(${FC_INCLUDE_DIRS} ${FT_INCLUDE_DIRS})
 link_directories(${FC_LBIRARY_DIRS} ${FT_LIBRARY_DIRS})
 add_compile_options(${FC_CFLAGS} ${FT_CFLAGS})
 
-add_executable(mt mt.cc arg.h config.h mt.h x.h x.cc)
+add_executable(mt mt.cc config.h mt.h x.h x.cc)
 target_link_libraries(mt -lm -lrt -lutil
                       ${X11_LIBRARIES} ${X11_Xft_LIB}
                       ${FC_LIBRARIES} ${FT_LIBRARIES})
