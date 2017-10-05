@@ -142,9 +142,6 @@ MouseShortcut mshortcuts[] = {
 Shortcut shortcuts[] = {
   // mask                      keysym          function        argument
   { XK_ANY_MOD,                XK_Break,       sendbreak,      0 },
-  { ControlMask,               XK_Print,       toggleprinter,  0 },
-  { ShiftMask,                 XK_Print,       printscreen,    0 },
-  { XK_ANY_MOD,                XK_Print,       printsel,       0 },
   { (ControlMask | ShiftMask), XK_Prior,       zoom,           +1.f },
   { (ControlMask | ShiftMask), XK_Next,        zoom,           -1.f },
   { (ControlMask | ShiftMask), XK_Home,        zoomreset,      0.f },
