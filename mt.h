@@ -4,6 +4,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <ctime>
+#include "escape.h"
 
 extern "C" {
 #include <X11/Xft/Xft.h>
@@ -68,7 +69,6 @@ enum term_mode {
   MODE_BRCKTPASTE  = 1 << 19,
   MODE_PRINT       = 1 << 20,
   MODE_UTF8        = 1 << 21,
-  MODE_SIXEL       = 1 << 22,
   MODE_MOUSE       = MODE_MOUSEBTN | MODE_MOUSEMOTION | MODE_MOUSEX10 |
                      MODE_MOUSEMANY,
 };
@@ -105,24 +105,33 @@ typedef struct {
 } TCursor;
 
 /* Internal representation of the screen */
-typedef struct {
-  int row;                /* nb row */
-  int col;                /* nb col */
-  Line *line;             /* screen */
-  Line *alt;              /* alternate screen */
-  int *dirty;             /* dirtyness of lines */
-  XftGlyphFontSpec *specbuf; /* font spec buffer used for rendering */
-  TCursor c;              /* cursor */
-  int top;                /* top    scroll limit */
-  int bot;                /* bottom scroll limit */
-  int mode;               /* terminal mode flags */
-  int esc;                /* escape state flags */
-  char trantbl[4];        /* charset table translation */
-  int charset;            /* current charset */
-  int icharset;           /* selected charset for sequence */
-  int numlock;            /* lock numbers in keyboard */
-  int *tabs;
-} Term;
+class Term : private DebugActions {
+public:
+  Term() : escape(this) {}
+  int row = 0;                         /* nb row */
+  int col = 0;                         /* nb col */
+  Line *line = nullptr;                /* screen */
+  Line *alt = nullptr;                 /* alternate screen */
+  int *dirty = nullptr;                /* dirtyness of lines */
+  XftGlyphFontSpec *specbuf = nullptr; /* font spec buffer used for rendering */
+  TCursor c = {};                      /* cursor */
+  int top = 0;                         /* top    scroll limit */
+  int bot = 0;                         /* bottom scroll limit */
+  int mode = 0;                        /* terminal mode flags */
+  char trantbl[4] = {0,0,0,0};         /* charset table translation */
+  int charset = 0          ;           /* current charset */
+  int numlock = 0;                     /* lock numbers in keyboard */
+  int *tabs = nullptr;
+  EscapeParser escape;
+
+private:
+  void Control(uint8_t control) override;
+  void Escape(const std::string& command) override;
+  void SetTitle(const std::string& payload) override;
+  void CSI(const std::string& command, const std::vector<int>& args) override;
+  void DCS(const std::string& command, const std::vector<int>& args, const std::string& payload) override;
+  void OSC(const std::string& command) override;
+};
 
 /* Purely graphic info */
 typedef struct {
