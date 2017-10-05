@@ -1153,7 +1153,7 @@ void tsetattr(const std::vector<int>& attr) {
       term.c.attr.mode |= ATTR_UNDERLINE;
       break;
     case 5: /* slow blink */
-      /* FALLTHROUGH */
+    /* FALLTHROUGH */
     case 6: /* rapid blink */
       term.c.attr.mode |= ATTR_BLINK;
       break;
@@ -1301,7 +1301,7 @@ void tsetmode(int priv, int set, const std::vector<int>& args) {
         if (!allowaltscreen)
           break;
         tcursor((set) ? CURSOR_SAVE : CURSOR_LOAD);
-        /* FALLTHROUGH */
+      /* FALLTHROUGH */
       case 47: /* swap screen */
       case 1047:
         if (!allowaltscreen)
@@ -1321,7 +1321,7 @@ void tsetmode(int priv, int set, const std::vector<int>& args) {
       case 2004: /* 2004: bracketed paste mode */
         MODBIT(term.mode, set, MODE_BRCKTPASTE);
         break;
-        /* Not implemented mouse modes. See comments there. */
+      /* Not implemented mouse modes. See comments there. */
       case 1001: /* mouse highlight mode; can hang the
                     terminal by design when implemented. */
       case 1005: /* UTF-8 mouse mode; will confuse
@@ -1406,12 +1406,12 @@ void Term::CSI(const std::string& command, const std::vector<int>& args) {
     return tmoveto(0, term.c.y - arg(0, 1));
   case 'g': /* TBC -- Tabulation clear */
     switch (arg(0, 0)) {
-      case 0: /* clear current tab stop */
-        term.tabs[term.c.x] = 0;
-        return;
-      case 3: /* clear all the tabs */
-        memset(term.tabs, 0, term.col * sizeof(*term.tabs));
-        return;
+    case 0: /* clear current tab stop */
+      term.tabs[term.c.x] = 0;
+      return;
+    case 3: /* clear all the tabs */
+      memset(term.tabs, 0, term.col * sizeof(*term.tabs));
+      return;
     }
     break;
   case 'G': /* CHA -- Move to <col> */
@@ -1425,18 +1425,18 @@ void Term::CSI(const std::string& command, const std::vector<int>& args) {
   case 'J': /* ED -- Clear screen */
     selclear();
     switch (arg(0, 0)) {
-      case 0: /* below */
-        tclearregion(term.c.x, term.c.y, term.col - 1, term.c.y);
-        if (term.c.y < term.row - 1) {
-          tclearregion(0, term.c.y + 1, term.col - 1, term.row - 1);
-        }
-        return;
-      case 1: /* above */
-        if (term.c.y > 1)
-          tclearregion(0, 0, term.col - 1, term.c.y - 1);
-        return tclearregion(0, term.c.y, term.c.x, term.c.y);
-      case 2: /* all */
-        return tclearregion(0, 0, term.col - 1, term.row - 1);
+    case 0: /* below */
+      tclearregion(term.c.x, term.c.y, term.col - 1, term.c.y);
+      if (term.c.y < term.row - 1) {
+        tclearregion(0, term.c.y + 1, term.col - 1, term.row - 1);
+      }
+      return;
+    case 1: /* above */
+      if (term.c.y > 1)
+        tclearregion(0, 0, term.col - 1, term.c.y - 1);
+      return tclearregion(0, term.c.y, term.c.x, term.c.y);
+    case 2: /* all */
+      return tclearregion(0, 0, term.col - 1, term.row - 1);
     }
     break;
   case 'K': /* EL -- Clear line */
@@ -1474,7 +1474,7 @@ void Term::CSI(const std::string& command, const std::vector<int>& args) {
   case 'n': /* DSR – Device Status Report (cursor position) */
     if (arg(0, 0) == 6) {
       len =
-        snprintf(buf, sizeof(buf), "\033[%i;%iR", term.c.y + 1, term.c.x + 1);
+          snprintf(buf, sizeof(buf), "\033[%i;%iR", term.c.y + 1, term.c.x + 1);
       ttywrite(buf, len);
     }
     return;
@@ -1539,7 +1539,7 @@ void Term::OSC(const std::string& command) {
       if (args.size() < 3)
         break;
       p = args[2].c_str();
-      /* FALLTHROUGH */
+    /* FALLTHROUGH */
     case 104: /* color reset, here p = NULL */
       int j = (args.size() > 1) ? atoi(args[1].c_str()) : -1;
       if (xsetcolorname(j, p)) {
