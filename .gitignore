@@ -4,4 +4,5 @@ CMakeFiles/*
 cmake_install.cmake
 .ninja_*
 *.ninja
+Makefile
 
