@@ -66,7 +66,6 @@ enum term_mode {
   MODE_MOUSEX10    = 1 << 17,
   MODE_MOUSEMANY   = 1 << 18,
   MODE_BRCKTPASTE  = 1 << 19,
-  MODE_PRINT       = 1 << 20,
   MODE_UTF8        = 1 << 21,
   MODE_SIXEL       = 1 << 22,
   MODE_MOUSE       = MODE_MOUSEBTN | MODE_MOUSEMOTION | MODE_MOUSEX10 |
@@ -226,7 +225,6 @@ extern char **opt_cmd;
 extern char *opt_class;
 extern char *opt_embed;
 extern char *opt_font;
-extern char *opt_io;
 extern char *opt_name;
 extern char *opt_title;
 extern int oldbutton;

@@ -128,10 +128,7 @@ static void selpaste(const Arg *);
 static void zoom(const Arg *);
 static void zoomabs(const Arg *);
 static void zoomreset(const Arg *);
-static void printsel(const Arg *);
-static void printscreen(const Arg *);
 static void iso14755(const Arg *);
-static void toggleprinter(const Arg *);
 static void sendbreak(const Arg *);
 
 /* config.h for applying patches and the configuration. */
@@ -150,10 +147,6 @@ static void strhandle(void);
 static void strparse(void);
 static void strreset(void);
 
-static void tprinter(const char *, size_t);
-static void tdumpsel(void);
-static void tdumpline(int);
-static void tdump(void);
 static void tclearregion(int, int, int, int);
 static void tcursor(int);
 static void tdeletechar(int);
@@ -194,8 +187,6 @@ static size_t utf8validate(Rune *, size_t);
 
 static char *base64dec(const char *);
 
-static ssize_t xwrite(int, const char *, size_t);
-
 /* Globals */
 TermWindow win;
 Term term;
@@ -206,14 +197,12 @@ char **opt_cmd = NULL;
 char *opt_class = NULL;
 char *opt_embed = NULL;
 char *opt_font = NULL;
-char *opt_io = NULL;
 char *opt_name = NULL;
 char *opt_title = NULL;
 int oldbutton = 3; /* button event on startup: 3 = release */
 
 static CSIEscape csiescseq;
 static STREscape strescseq;
-static int iofd = 1;
 
 char *usedfont = NULL;
 double usedfontsize = 0;
@@ -233,21 +222,6 @@ size_t selmaskslen = LEN(selmasks);
 // Identification sequence returned in DA and DECID.
 // We claim to be a VT102, feature detection is via terminfo in practice.
 static char vt102_identify[] = "\033[?6c";
-
-ssize_t xwrite(int fd, const char *s, size_t len) {
-  size_t aux = len;
-  ssize_t r;
-
-  while (len > 0) {
-    r = write(fd, s, len);
-    if (r < 0)
-      return r;
-    len -= r;
-    s += r;
-  }
-
-  return aux;
-}
 
 template <typename T> T *xmalloc(size_t len) {
   void *p = malloc(len * sizeof(T));
@@ -679,14 +653,6 @@ void ttynew(void) {
   struct winsize w = {static_cast<unsigned short>(term.row),
                       static_cast<unsigned short>(term.col), 0, 0};
 
-  if (opt_io) {
-    term.mode |= MODE_PRINT;
-    iofd = (!strcmp(opt_io, "-")) ? 1 : open(opt_io, O_WRONLY | O_CREAT, 0666);
-    if (iofd < 0) {
-      fprintf(stderr, "Error opening %s:%s\n", opt_io, strerror(errno));
-    }
-  }
-
   /* seems to work fine on linux, openbsd and freebsd */
   if (openpty(&m, &s, NULL, NULL, &w) < 0)
     die("openpty failed: %s\n", strerror(errno));
@@ -696,7 +662,6 @@ void ttynew(void) {
     die("fork failed\n");
     break;
   case 0:
-    close(iofd);
     setsid(); /* create a new process group */
     dup2(s, 0);
     dup2(s, 1);
@@ -1463,24 +1428,7 @@ void csihandle(void) {
     DEFAULT(csiescseq.arg[0], 1);
     tmoveto(term.c.x, term.c.y + csiescseq.arg[0]);
     break;
-  case 'i': /* MC -- Media Copy */
-    switch (csiescseq.arg[0]) {
-    case 0:
-      tdump();
-      break;
-    case 1:
-      tdumpline(term.c.y);
-      break;
-    case 2:
-      tdumpsel();
-      break;
-    case 4:
-      term.mode &= ~MODE_PRINT;
-      break;
-    case 5:
-      term.mode |= MODE_PRINT;
-      break;
-    }
+  case 'i': /* MC -- Media Copy (ignored) */
     break;
   case 'c': /* DA -- Device Attributes */
     if (csiescseq.arg[0] == 0)
@@ -1783,14 +1731,6 @@ void sendbreak(const Arg *arg) {
     perror("Error sending break");
 }
 
-void tprinter(const char *s, size_t len) {
-  if (iofd != -1 && xwrite(iofd, s, len) < 0) {
-    fprintf(stderr, "Error writing in %s:%s\n", opt_io, strerror(errno));
-    close(iofd);
-    iofd = -1;
-  }
-}
-
 void iso14755(const Arg *arg) {
   unsigned long id = xwinid();
   char cmd[sizeof(ISO14755CMD) + NUMMAXLEN(id)];
@@ -1811,41 +1751,6 @@ void iso14755(const Arg *arg) {
     return;
 
   ttysend(uc, utf8encode(utf32, uc));
-}
-
-void toggleprinter(const Arg *arg) { term.mode ^= MODE_PRINT; }
-
-void printscreen(const Arg *arg) { tdump(); }
-
-void printsel(const Arg *arg) { tdumpsel(); }
-
-void tdumpsel(void) {
-  char *ptr;
-
-  if ((ptr = getsel())) {
-    tprinter(ptr, strlen(ptr));
-    free(ptr);
-  }
-}
-
-void tdumpline(int n) {
-  char buf[UTF_SIZ];
-  MTGlyph *bp, *end;
-
-  bp = &term.line[n][0];
-  end = &bp[MIN(tlinelen(n), term.col) - 1];
-  if (bp != end || bp->u != ' ') {
-    for (; bp <= end; ++bp)
-      tprinter(buf, utf8encode(bp->u, buf));
-  }
-  tprinter("\n", 1);
-}
-
-void tdump(void) {
-  int i;
-
-  for (i = 0; i < term.row; ++i)
-    tdumpline(i);
 }
 
 void tputtab(int n) {
@@ -2128,9 +2033,6 @@ void tputc(Rune u) {
       width = 1;
     }
   }
-
-  if (IS_SET(MODE_PRINT))
-    tprinter(c, len);
 
   /*
    * STR sequence must be checked before anything else
@@ -2433,8 +2335,7 @@ void cresize(int width, int height) {
 }
 
 void usage(void) {
-  die("usage: %s [-aiv] [-c class] [-f font] [-g geometry]"
-      " [-n name] [-o file]\n"
+  die("usage: %s [-aiv] [-c class] [-f font] [-g geometry] [-n name] \n"
       "          [-T title] [-t title] [-w windowid]"
       " [[-e] command [args ...]]\n",
       argv0);
