@@ -40,8 +40,6 @@ extern "C" {
 
 #include "x.h"
 
-char *argv0;
-
 /* Arbitrary sizes */
 #define UTF_INVALID 0xFFFD
 #define ESC_BUF_SIZ (128 * UTF_SIZ)
@@ -2432,10 +2430,3 @@ void cresize(int width, int height) {
   xresize(col, row);
 }
 
-void usage(void) {
-  die("usage: %s [-aiv] [-c class] [-f font] [-g geometry]"
-      " [-n name] [-o file]\n"
-      "          [-T title] [-t title] [-w windowid]"
-      " [[-e] command [args ...]]\n",
-      argv0);
-}

@@ -22,7 +22,6 @@ extern "C" {
 #include <unistd.h>
 }
 
-#include "arg.h"
 #include "mt.h"
 
 /* XEMBED messages */
@@ -1566,53 +1565,79 @@ int main(int argc, char *argv[]) {
   xw.isfixed = False;
   win.cursor = cursorshape;
 
-  ARGBEGIN {
-  case 'a':
-    allowaltscreen = 0;
-    break;
-  case 'c':
-    opt_class = EARGF(usage());
-    break;
-  case 'e':
-    if (argc > 0)
-      --argc, ++argv;
-    goto run;
-  case 'f':
-    opt_font = EARGF(usage());
-    break;
-  case 'g':
-    xw.gm = XParseGeometry(EARGF(usage()), &xw.l, &xw.t, &cols, &rows);
-    break;
-  case 'i':
-    xw.isfixed = 1;
-    break;
-  case 'o':
-    opt_io = EARGF(usage());
-    break;
-  case 'n':
-    opt_name = EARGF(usage());
-    break;
-  case 't':
-  case 'T':
-    opt_title = EARGF(usage());
-    break;
-  case 'w':
-    opt_embed = EARGF(usage());
-    break;
-  case 'v':
-    die("%s " VERSION "\n", argv0);
-    break;
-  default:
-    usage();
+  auto usage = [&]{
+    fprintf(stderr,
+R"(usage: %s [-iv] [-c class] [-f font] [-g geometry] [-n name] [-o file]
+            [-T title] [-t title] [-w windowid] [[-e] command [args ...]]
+)", argv[0]);
+  };
+  int argi, argj;  // Index and character being processed.
+  auto read_param = [&]{
+    // -fvalue syntax: parameter is the rest of the word.
+    if (argv[argi][argj + 1] != '\0') {
+      auto* rest = &argv[argi][argj + 1];
+      argj = strlen(argv[argi]) - 1; // advance cursor to last char
+      return rest;
+    }
+    // -f value syntax: parameter is the next word.
+    if (++argi < argc) {
+      argj = strlen(argv[argi]) - 1;
+      return argv[argi];
+    }
+    usage(); // Missing param.
+    exit(1);
+  };
+  for (argi = 1; argi < argc; ++argi) {
+    const char* arg = argv[argi];
+    // Stop after non-flag args, including --.
+    if (argv[argi][0] != '-' || (argv[argi][1] == '-' && !argv[argi][2])) break;
+    for (argj = 1; argv[argi][argj] != '\0'; ++argj) switch(arg[argj]) {
+      case 'a':
+        allowaltscreen = 0;
+        break;
+      case 'c':
+        opt_class = read_param();
+        break;
+      case 'e':
+        ++argi;
+        goto run;
+      case 'f':
+        opt_font = read_param();
+        break;
+      case 'g':
+        xw.gm = XParseGeometry(read_param(), &xw.l, &xw.t, &cols, &rows);
+        break;
+      case 'i':
+        xw.isfixed = 1;
+        break;
+      case 'o':
+        opt_io = read_param();
+        break;
+      case 'n':
+        opt_name = read_param();
+        break;
+      case 't':
+      case 'T':
+        opt_title = read_param();
+        break;
+      case 'w':
+        opt_embed = read_param();
+        break;
+      case 'v':
+        fprintf(stderr, "%s " VERSION "\n", argv[0]);
+        exit(0);
+      default:
+        usage();
+        exit(1);
+    }
   }
-  ARGEND;
 
 run:
-  if (argc > 0) {
+  if (argi < argc) {
     /* eat all remaining arguments */
-    opt_cmd = argv;
+    opt_cmd = &argv[argi];
     if (!opt_title)
-      opt_title = basename(xstrdup(argv[0]));
+      opt_title = basename(opt_cmd[0]);
   }
   setlocale(LC_CTYPE, "");
   XSetLocaleModifiers("");

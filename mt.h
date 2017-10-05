@@ -214,8 +214,6 @@ size_t utf8encode(Rune, char *);
 
 char *xstrdup(char *);
 
-void usage(void);
-
 /* Globals */
 extern TermWindow win;
 extern Term term;
