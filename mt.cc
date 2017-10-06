@@ -21,7 +21,6 @@ extern "C" {
 #include <libgen.h>
 #include <pwd.h>
 #include <sys/ioctl.h>
-#include <sys/select.h>
 #include <sys/stat.h>
 #include <sys/time.h>
 #include <sys/types.h>
@@ -201,6 +200,7 @@ TermWindow win;
 Term term;
 Selection sel;
 int cmdfd;
+std::deque<char> write_buffer;
 pid_t pid;
 char **opt_cmd = NULL;
 char *opt_class = NULL;
@@ -755,58 +755,7 @@ size_t ttyread(void) {
 }
 
 void ttywrite(const char *s, size_t n) {
-  fd_set wfd, rfd;
-  ssize_t r;
-  size_t lim = 256;
-
-  /*
-   * Remember that we are using a pty, which might be a modem line.
-   * Writing too much will clog the line. That's why we are doing this
-   * dance.
-   * FIXME: Migrate the world to Plan 9.
-   */
-  while (n > 0) {
-    FD_ZERO(&wfd);
-    FD_ZERO(&rfd);
-    FD_SET(cmdfd, &wfd);
-    FD_SET(cmdfd, &rfd);
-
-    /* Check if we can write. */
-    if (pselect(cmdfd + 1, &rfd, &wfd, NULL, NULL, NULL) < 0) {
-      if (errno == EINTR)
-        continue;
-      die("select failed: %s\n", strerror(errno));
-    }
-    if (FD_ISSET(cmdfd, &wfd)) {
-      /*
-       * Only write the bytes written by ttywrite() or the
-       * default of 256. This seems to be a reasonable value
-       * for a serial line. Bigger values might clog the I/O.
-       */
-      if ((r = write(cmdfd, s, (n < lim) ? n : lim)) < 0)
-        goto write_error;
-      if (r < n) {
-        /*
-         * We weren't able to write out everything.
-         * This means the buffer is getting full
-         * again. Empty it.
-         */
-        if (n < lim)
-          lim = ttyread();
-        n -= r;
-        s += r;
-      } else {
-        /* All bytes have been written. */
-        break;
-      }
-    }
-    if (FD_ISSET(cmdfd, &rfd))
-      lim = ttyread();
-  }
-  return;
-
-write_error:
-  die("write error on tty: %s\n", strerror(errno));
+  write_buffer.insert(write_buffer.begin(), s, s + n);
 }
 
 void ttysend(const char *s, size_t n) {
