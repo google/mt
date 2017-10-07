@@ -1,5 +1,8 @@
 #include "mt.h"
 
+#include <algorithm>
+#include <iterator>
+
 #include <cctype>
 #include <cerrno>
 #include <climits>
@@ -55,7 +58,6 @@ char *argv0;
 #define ISCONTROLC0(c) (BETWEEN(c, 0, 0x1f) || (c) == '\177')
 #define ISCONTROLC1(c) (BETWEEN(c, 0x80, 0x9f))
 #define ISCONTROL(c) (ISCONTROLC0(c) || ISCONTROLC1(c))
-#define ISDELIM(u) (utf8strchr(worddelimiters, u) != NULL)
 
 /* constants */
 #define ISO14755CMD "dmenu -w %lu -p codepoint: </dev/null"
@@ -189,7 +191,6 @@ static void selsnap(int *, int *, int);
 
 static Rune utf8decodebyte(char, size_t *);
 static char utf8encodebyte(Rune, size_t);
-static char *utf8strchr(char *s, Rune u);
 static size_t utf8validate(Rune *, size_t);
 
 static char *base64dec(const char *);
@@ -321,21 +322,6 @@ size_t utf8encode(Rune u, char *c) {
 
 char utf8encodebyte(Rune u, size_t i) { return utfbyte[i] | (u & ~utfmask[i]); }
 
-char *utf8strchr(char *s, Rune u) {
-  Rune r;
-  size_t i, j, len;
-
-  len = strlen(s);
-  for (i = 0, j = 0; i < len; i += j) {
-    if (!(j = utf8decode(&s[i], &r, len - i)))
-      break;
-    if (r == u)
-      return &(s[i]);
-  }
-
-  return NULL;
-}
-
 size_t utf8validate(Rune *u, size_t i) {
   if (!BETWEEN(*u, utfmin[i], utfmax[i]) || BETWEEN(*u, 0xD800, 0xDFFF))
     *u = UTF_INVALID;
@@ -459,6 +445,11 @@ int selected(int x, int y) {
          (y != sel.ne.y || x <= sel.ne.x);
 }
 
+static bool isdelim(Rune u) {
+  return std::find(std::begin(worddelimiters), std::end(worddelimiters), u) !=
+         std::end(worddelimiters);
+}
+
 void selsnap(int *x, int *y, int direction) {
   int newx, newy, xt, yt;
   int delim, prevdelim;
@@ -471,7 +462,7 @@ void selsnap(int *x, int *y, int direction) {
      * beginning of a line.
      */
     prevgp = &term.line[*y][*x];
-    prevdelim = ISDELIM(prevgp->u);
+    prevdelim = isdelim(prevgp->u);
     for (;;) {
       newx = *x + direction;
       newy = *y;
@@ -493,7 +484,7 @@ void selsnap(int *x, int *y, int direction) {
         break;
 
       gp = &term.line[newy][newx];
-      delim = ISDELIM(gp->u);
+      delim = isdelim(gp->u);
       if (!(gp->mode & ATTR_WDUMMY) &&
           (delim != prevdelim || (delim && gp->u != prevgp->u)))
         break;
