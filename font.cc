@@ -10,6 +10,7 @@ class ScopedFontAttribute {
   ScopedFontAttribute(FcPattern* pattern, const char* attribute, T value)
       : pattern_(pattern), attribute_(attribute), had_value_(Get(&old_value_)) {
     if (had_value_) FcPatternDel(pattern_, attribute_);
+    Set(value);
   }
 
   ~ScopedFontAttribute() {
@@ -29,11 +30,11 @@ class ScopedFontAttribute {
 
 template <>
 bool ScopedFontAttribute<int>::Get(int* value) {
-  return FcPatternGetInteger(pattern_, attribute_, 0, value);
+  return FcPatternGetInteger(pattern_, attribute_, 0, value) == FcResultMatch;
 }
 template <>
 bool ScopedFontAttribute<double>::Get(double* value) {
-  return FcPatternGetDouble(pattern_, attribute_, 0, value);
+  return FcPatternGetDouble(pattern_, attribute_, 0, value) == FcResultMatch;
 }
 template <>
 void ScopedFontAttribute<int>::Set(int value) {
@@ -70,7 +71,7 @@ FontSet::FontSet(const std::string& spec, Display* display, int screen)
 }
 
 void FontSet::SetPixelSize(double new_size) {
-  ScopedFontAttribute<double>(pattern_.get(), FC_PIXEL_SIZE, new_size);
+  ScopedFontAttribute<double> size(pattern_.get(), FC_PIXEL_SIZE, new_size);
   Load();
 }
 
@@ -81,16 +82,16 @@ void FontSet::Load() {
   };
   plain_ = load_variant();
   {
-    ScopedFontAttribute<int>(pattern_.get(), FC_WEIGHT, FC_WEIGHT_BOLD);
+    ScopedFontAttribute<int> bold(pattern_.get(), FC_WEIGHT, FC_WEIGHT_BOLD);
     bold_ = load_variant();
   }
   {
-    ScopedFontAttribute<int>(pattern_.get(), FC_SLANT, FC_SLANT_ITALIC);
+    ScopedFontAttribute<int> italic(pattern_.get(), FC_SLANT, FC_SLANT_ITALIC);
     italic_ = load_variant();
   }
   {
-    ScopedFontAttribute<int>(pattern_.get(), FC_WEIGHT, FC_WEIGHT_BOLD);
-    ScopedFontAttribute<int>(pattern_.get(), FC_SLANT, FC_SLANT_ITALIC);
+    ScopedFontAttribute<int> bold(pattern_.get(), FC_WEIGHT, FC_WEIGHT_BOLD);
+    ScopedFontAttribute<int> italic(pattern_.get(), FC_SLANT, FC_SLANT_ITALIC);
     bold_italic_ = load_variant();
   }
   // We assume metrics are the same for all variants.

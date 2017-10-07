@@ -640,9 +640,13 @@ int xgeommasktogravity(int mask) {
   return SouthEastGravity;
 }
 
+static int default_font_size;
+double xdefaultfontsize() { return default_font_size; }
+double xfontsize() { return dc.fonts->metrics().size; }
+
 // XXX
-void xloadfonts(const char *fontstr, double fontsize) {
-  dc.fonts.reset(new FontSet(fontstr, xw.dpy, xw.scr));
+void xloadfonts(double fontsize) {
+  dc.fonts->SetPixelSize(fontsize);
   /* Setting character width and height. */
   win.cw = ceilf(dc.fonts->metrics().width * cwscale);
   win.ch = ceilf(dc.fonts->metrics().height * chscale);
@@ -652,7 +656,6 @@ void xunloadfonts(void) {
   /* Free the loaded fonts in the font cache.  */
   while (frclen > 0)
     XftFontClose(xw.dpy, frc[--frclen].font);
-  dc.fonts = nullptr;
 }
 
 void xinit(void) {
@@ -671,8 +674,11 @@ void xinit(void) {
   if (!FcInit())
     die("Could not init fontconfig.\n");
 
-  usedfont = (opt_font == NULL) ? font : opt_font;
-  xloadfonts(usedfont, 0);
+  dc.fonts.reset(new FontSet((opt_font == NULL) ? font : opt_font, xw.dpy, xw.scr));
+  default_font_size = dc.fonts->metrics().size;
+  /* Setting character width and height. */ // XXX duplication!
+  win.cw = ceilf(dc.fonts->metrics().width * cwscale);
+  win.ch = ceilf(dc.fonts->metrics().height * chscale);
 
   /* colors */
   xw.cmap = XDefaultColormap(xw.dpy, xw.scr);

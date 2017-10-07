@@ -27,7 +27,7 @@ class FontSet {
   struct Metrics {
     Metrics(XftFont* font, Display* display);
     double size;
-    int width, height, ascent, descent;
+    int width, height, ascent;
   };
   const Metrics& metrics() const { return *metrics_; }
 

@@ -215,10 +215,6 @@ static CSIEscape csiescseq;
 static STREscape strescseq;
 static int iofd = 1;
 
-char *usedfont = NULL;
-double usedfontsize = 0;
-double defaultfontsize = 0;
-
 static uchar utfbyte[UTF_SIZ + 1] = {0x80, 0, 0xC0, 0xE0, 0xF0};
 static uchar utfmask[UTF_SIZ + 1] = {0xC0, 0x80, 0xE0, 0xF0, 0xF8};
 static Rune utfmin[UTF_SIZ + 1] = {0, 0, 0x80, 0x800, 0x10000};
@@ -2346,13 +2342,13 @@ void tresize(int col, int row) {
 }
 
 void zoom(const Arg *arg) {
-  Arg larg = float(usedfontsize + arg->f);
+  Arg larg = float(xfontsize() + arg->f);
   zoomabs(&larg);
 }
 
 void zoomabs(const Arg *arg) {
   xunloadfonts();
-  xloadfonts(usedfont, arg->f);
+  xloadfonts(arg->f);
   cresize(0, 0);
   ttyresize();
   redraw();
@@ -2360,10 +2356,8 @@ void zoomabs(const Arg *arg) {
 }
 
 void zoomreset(const Arg *arg) {
-  if (defaultfontsize > 0) {
-    Arg larg = float(defaultfontsize);
-    zoomabs(&larg);
-  }
+  Arg larg = float(xdefaultfontsize());
+  zoomabs(&larg);
 }
 
 void resettitle(void) { xsettitle(opt_title ? opt_title : "mt"); }

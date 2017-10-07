@@ -232,10 +232,6 @@ extern char *opt_name;
 extern char *opt_title;
 extern int oldbutton;
 
-extern char *usedfont;
-extern double usedfontsize;
-extern double defaultfontsize;
-
 /* config.h globals */
 extern char font[];
 extern int borderpx;
