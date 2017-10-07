@@ -1490,9 +1490,10 @@ void run(void) {
   clock_gettime(CLOCK_MONOTONIC, &last);
   lastblink = last;
 
-  std::array<pollfd, 2> poll_fds = {{pollfd{cmdfd, POLLIN, 0}, pollfd{xfd, POLLIN, 0}}};
-  pollfd& poll_cmd = poll_fds[0];
-  pollfd& poll_x = poll_fds[1];
+  std::array<pollfd, 2> poll_fds = {
+      {pollfd{cmdfd, POLLIN, 0}, pollfd{xfd, POLLIN, 0}}};
+  pollfd &poll_cmd = poll_fds[0];
+  pollfd &poll_x = poll_fds[1];
 
   for (xev = actionfps;;) {
     poll_cmd.events = POLLIN | (write_buffer.empty() ? 0 : POLLOUT);
@@ -1515,11 +1516,10 @@ void run(void) {
       std::copy(write_buffer.begin(), write_buffer.begin() + len, buf.data());
       len = write(cmdfd, buf.data(), len);
       if (len < 0) die("write error on tty: %s\n", strerror(errno));
-      write_buffer.resize(write_buffer.size() - len);
+      write_buffer.erase(write_buffer.begin(), write_buffer.begin() + len);
     }
 
-    if (poll_x.revents & POLLIN)
-      xev = actionfps;
+    if (poll_x.revents & POLLIN) xev = actionfps;
 
     clock_gettime(CLOCK_MONOTONIC, &now);
     drawtimeout.tv_sec = 0;
@@ -1550,8 +1550,7 @@ void run(void) {
       draw();
       XFlush(xw.dpy);
 
-      if (xev && !(poll_x.revents & POLLIN))
-        xev--;
+      if (xev && !(poll_x.revents & POLLIN)) xev--;
       if (!(poll_cmd.revents & POLLIN) && !(poll_x.revents & POLLIN)) {
         if (blinkset) {
           if (TIMEDIFF(now, lastblink) > blinktimeout) {

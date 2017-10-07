@@ -755,7 +755,7 @@ size_t ttyread(void) {
 }
 
 void ttywrite(const char *s, size_t n) {
-  write_buffer.insert(write_buffer.begin(), s, s + n);
+  write_buffer.insert(write_buffer.end(), s, s + n);
 }
 
 void ttysend(const char *s, size_t n) {
