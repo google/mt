@@ -4,6 +4,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <ctime>
+#include <deque>
 
 extern "C" {
 #include <X11/Xft/Xft.h>
@@ -221,6 +222,7 @@ extern TermWindow win;
 extern Term term;
 extern Selection sel;
 extern int cmdfd;
+extern std::deque<char> write_buffer;
 extern pid_t pid;
 extern char **opt_cmd;
 extern char *opt_class;

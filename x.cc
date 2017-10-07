@@ -1,6 +1,7 @@
 #include "x.h"
 
 #include <algorithm>
+#include <array>
 
 #include <cerrno>
 #include <clocale>
@@ -18,7 +19,7 @@ extern "C" {
 #include <X11/cursorfont.h>
 #include <X11/keysym.h>
 #include <libgen.h>
-#include <sys/select.h>
+#include <poll.h>
 #include <unistd.h>
 }
 
@@ -1462,7 +1463,6 @@ void resize(XEvent *e) {
 void run(void) {
   XEvent ev;
   int w = win.w, h = win.h;
-  fd_set rfd;
   int xfd = XConnectionNumber(xw.dpy), xev, blinkset = 0, dodraw = 0;
   struct timespec drawtimeout, *tv = NULL, now, last, lastblink;
   long deltatime;
@@ -1490,17 +1490,19 @@ void run(void) {
   clock_gettime(CLOCK_MONOTONIC, &last);
   lastblink = last;
 
-  for (xev = actionfps;;) {
-    FD_ZERO(&rfd);
-    FD_SET(cmdfd, &rfd);
-    FD_SET(xfd, &rfd);
+  std::array<pollfd, 2> poll_fds = {
+      {pollfd{cmdfd, POLLIN, 0}, pollfd{xfd, POLLIN, 0}}};
+  pollfd &poll_cmd = poll_fds[0];
+  pollfd &poll_x = poll_fds[1];
 
-    if (pselect(MAX(xfd, cmdfd) + 1, &rfd, NULL, NULL, tv, NULL) < 0) {
+  for (xev = actionfps;;) {
+    poll_cmd.events = POLLIN | (write_buffer.empty() ? 0 : POLLOUT);
+    if (ppoll(poll_fds.data(), poll_fds.size(), tv, nullptr) < 0) {
       if (errno == EINTR)
         continue;
       die("select failed: %s\n", strerror(errno));
     }
-    if (FD_ISSET(cmdfd, &rfd)) {
+    if (poll_cmd.revents & POLLIN) {
       ttyread();
       if (blinktimeout) {
         blinkset = tattrset(ATTR_BLINK);
@@ -1508,9 +1510,16 @@ void run(void) {
           MODBIT(term.mode, 0, MODE_BLINK);
       }
     }
+    if (poll_cmd.revents & POLLOUT) {
+      static std::array<char, 256> buf;
+      int len = std::min(buf.size(), write_buffer.size());
+      std::copy(write_buffer.begin(), write_buffer.begin() + len, buf.data());
+      len = write(cmdfd, buf.data(), len);
+      if (len < 0) die("write error on tty: %s\n", strerror(errno));
+      write_buffer.erase(write_buffer.begin(), write_buffer.begin() + len);
+    }
 
-    if (FD_ISSET(xfd, &rfd))
-      xev = actionfps;
+    if (poll_x.revents & POLLIN) xev = actionfps;
 
     clock_gettime(CLOCK_MONOTONIC, &now);
     drawtimeout.tv_sec = 0;
@@ -1541,9 +1550,8 @@ void run(void) {
       draw();
       XFlush(xw.dpy);
 
-      if (xev && !FD_ISSET(xfd, &rfd))
-        xev--;
-      if (!FD_ISSET(cmdfd, &rfd) && !FD_ISSET(xfd, &rfd)) {
+      if (xev && !(poll_x.revents & POLLIN)) xev--;
+      if (!(poll_cmd.revents & POLLIN) && !(poll_x.revents & POLLIN)) {
         if (blinkset) {
           if (TIMEDIFF(now, lastblink) > blinktimeout) {
             drawtimeout.tv_nsec = 1000;
