@@ -20,7 +20,7 @@ float chscale = 1.0;
 
 // Characters that separate words.
 // This affects text selection.
-static char worddelimiters[] = " ";
+static Rune worddelimiters[] = {' '};
 
 // Timeouts for selection gestures, in milliseconds.
 unsigned int doubleclicktimeout = 300;
