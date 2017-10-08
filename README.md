@@ -39,7 +39,6 @@ the Ninja generator of CMake is encouraged.
 
 - From the original `st` documentation
   - add diacritics support to xdraws()
-  - make the font cache simpler
   - add better support for brightening of the upper colors
 
 ## Application

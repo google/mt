@@ -17,7 +17,6 @@ extern "C" {
 #define MAX(a, b) ((a) < (b) ? (b) : (a))
 #define LEN(a) (sizeof(a) / sizeof(a)[0])
 #define BETWEEN(x, a, b) ((a) <= (x) && (x) <= (b))
-#define DIVCEIL(n, d) (((n) + ((d)-1)) / (d))
 #define LIMIT(x, a, b) (x) = (x) < (a) ? (a) : (x) > (b) ? (b) : (x)
 #define ATTRCMP(a, b)                                                          \
   ((a).mode != (b).mode || (a).fg != (b).fg || (a).bg != (b).bg)
@@ -230,10 +229,6 @@ extern char *opt_io;
 extern char *opt_name;
 extern char *opt_title;
 extern int oldbutton;
-
-extern char *usedfont;
-extern double usedfontsize;
-extern double defaultfontsize;
 
 /* config.h globals */
 extern char font[];

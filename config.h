@@ -126,9 +126,6 @@ unsigned int mouseshape = XC_xterm;
 unsigned int mousefg = 7;
 unsigned int mousebg = 0;
 
-// Color indicating the active style (bold, italic) isn't supported by the font.
-unsigned int defaultattr = 11;
-
 // Mouse shortcuts.
 // The default values map the scroll wheel (Button4/5) to ^Y/^E (vim commands).
 // Note that mapping Button1 will interfere with selection.
