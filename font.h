@@ -4,8 +4,6 @@
 #include <X11/Xft/Xft.h>
 #include <memory>
 #include <string>
-#include <unordered_set>
-#include <vector>
 
 // A loaded font including variants (bold/italic).
 // Errors are not recoverable: exit() is called if font loading fails.

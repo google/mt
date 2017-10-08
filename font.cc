@@ -1,5 +1,8 @@
 #include "font.h"
 
+#include <unordered_set>
+#include <vector>
+
 namespace {
 
 // Helper to modify at attribute (size, weight, slant) of an FcPattern.
@@ -63,7 +66,7 @@ int DivCeiling(int n, int d) { return (n + d - 1) / d; }
 
 }  // namespace
 
-// Most of the hard work is handled by the Variant, which handles one style.
+// Most of the hard work is done by the Variant, which handles one style.
 class MTFont::Variant {
  public:
   Variant(FcPattern* pattern, Display* display, int screen)
