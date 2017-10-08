@@ -45,12 +45,110 @@ void ScopedFontAttribute<double>::Set(double value) {
   FcPatternAddDouble(pattern_, attribute_, value);
 }
 
+struct FontSetDeleter {
+  void operator()(FcFontSet* p) { FcFontSetDestroy(p); }
+};
+using ScopedFontSet = std::unique_ptr<FcFontSet, FontSetDeleter>;
+struct CharSetDeleter {
+  void operator()(FcCharSet* p) { FcCharSetDestroy(p); }
+};
+using ScopedCharSet = std::unique_ptr<FcCharSet, CharSetDeleter>;
+struct FontDeleter {
+  void operator()(XftFont* font) { XftFontClose(display, font); }
+  Display* display;
+};
+using ScopedFont = std::unique_ptr<XftFont, FontDeleter>;
+
+int DivCeiling(int n, int d) { return (n + d - 1) / d; }
+
 }  // namespace
 
-FontSet::FontSet(const std::string& spec, Display* display, int screen)
-    : pattern_(spec[0] == '-' ? XftXlfdParse(spec.c_str(), 0, 0)
-                              : FcNameParse((FcChar8*)spec.c_str()),
-               FcPatternDestroy),
+// Most of the hard work is handled by the Variant, which handles one style.
+class MTFont::Variant {
+ public:
+  Variant(FcPattern* pattern, Display* display, int screen)
+      : pattern_(FcPatternDuplicate(pattern)), display_(display) {
+    auto fail = [pattern] {
+      fprintf(stderr, "mt: failed to load font %s\n", FcNameUnparse(pattern));
+      exit(1);
+    };
+    if (pattern_ == nullptr) fail();
+    FcConfigSubstitute(NULL, pattern_.get(), FcMatchPattern);
+    XftDefaultSubstitute(display, screen, pattern_.get());
+    FcResult unused;
+    FcPattern* match = FcFontMatch(NULL, pattern_.get(), &unused);
+    if (match == nullptr) fail();
+    fonts_.emplace_back(XftFontOpenPattern(display, match),
+                        FontDeleter{display});
+    if (fonts_.back() == nullptr) fail();
+  }
+
+  Glyph FindGlyph(uint32_t rune) {
+    // Lookup with default fonts and cached fallback fonts.
+    for (const auto& font : fonts_) {
+      if (FT_UInt index = XftCharIndex(display_, font.get(), rune)) {
+        return {index, font.get()};
+      }
+    }
+
+    // No glyph in cached fonts, check for a cached negative result.
+    if (glyphless_runes_.count(rune)) return {0, fonts_.front().get()};
+
+    // Missed the cache, so get the font from fontconfig.
+    FcResult fcres;
+    if (!set_)  // Initialized lazily for faster startup with no emoji.
+      set_.reset(FcFontSort(0, pattern_.get(), 1, 0, &fcres));
+    ScopedCharSet charset(FcCharSetCreate());
+    FcCharSetAddChar(charset.get(), rune);
+    ScopedPattern pattern(FcPatternDuplicate(pattern_.get()));
+    FcPatternAddCharSet(pattern.get(), FC_CHARSET, charset.get());
+    FcPatternAddBool(pattern.get(), FC_SCALABLE, 1);
+    FcConfigSubstitute(0, pattern.get(), FcMatchPattern);
+    FcDefaultSubstitute(pattern.get());
+    FcFontSet* sets[] = {set_.get()};
+    FcPattern* match = FcFontSetMatch(0, sets, 1, pattern.get(), &fcres);
+    ScopedFont font(XftFontOpenPattern(display_, match), FontDeleter{display_});
+    FT_UInt index = XftCharIndex(display_, font.get(), rune);
+
+    // Cache and return.
+    if (index == 0 /* unknown */) {
+      glyphless_runes_.insert(rune);
+      return {0, fonts_.front().get()};
+    }
+    fonts_.push_back(std::move(font));
+    return {index, fonts_.back().get()};
+  }
+
+  Metrics Measure() {
+    Metrics metrics;
+    XftFont* font = fonts_.front().get();
+    FcPatternGetDouble(font->pattern, FC_PIXEL_SIZE, 0, &metrics.pixel_size);
+    metrics.height = font->ascent + font->descent;
+    metrics.ascent = font->ascent;
+    // We take font width as the average of these characters.
+    static char ascii_printable[] =
+        " !\"#$%&'()*+,-./0123456789:;<=>?"
+        "@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_"
+        "`abcdefghijklmnopqrstuvwxyz{|}~";
+    XGlyphInfo extents;
+    XftTextExtentsUtf8(display_, font, (const FcChar8*)ascii_printable,
+                       strlen(ascii_printable), &extents);
+    metrics.width = DivCeiling(extents.xOff, strlen(ascii_printable));
+    return metrics;
+  }
+
+ private:
+  std::vector<ScopedFont> fonts_;  // First is primary, rest are fallbacks.
+  std::unordered_set<uint32_t> glyphless_runes_;
+  ScopedPattern pattern_;
+  Display* display_;
+  ScopedFontSet set_;
+};
+
+// MTFont is responsible for setting up the base pattern, and loading variants.
+MTFont::MTFont(const std::string& spec, Display* display, int screen)
+    : pattern_(spec.c_str()[0] == '-' ? XftXlfdParse(spec.c_str(), 0, 0)
+                                      : FcNameParse((FcChar8*)spec.c_str())),
       display_(display),
       screen_(screen) {
   if (pattern_ == nullptr) {
@@ -70,66 +168,36 @@ FontSet::FontSet(const std::string& spec, Display* display, int screen)
   FcPatternDel(pattern_.get(), FC_SIZE);
 }
 
-void FontSet::SetPixelSize(double new_size) {
+MTFont::~MTFont() = default;
+
+void MTFont::SetPixelSize(double new_size) {
   ScopedFontAttribute<double> size(pattern_.get(), FC_PIXEL_SIZE, new_size);
   Load();
 }
 
-void FontSet::Load() {
+void MTFont::Load() {
   auto load_variant = [this] {
     return std::unique_ptr<Variant>(
         new Variant(pattern_.get(), display_, screen_));
   };
-  plain_ = load_variant();
+  variants_[PLAIN] = load_variant();
   {
     ScopedFontAttribute<int> bold(pattern_.get(), FC_WEIGHT, FC_WEIGHT_BOLD);
-    bold_ = load_variant();
+    variants_[BOLD] = load_variant();
   }
   {
     ScopedFontAttribute<int> italic(pattern_.get(), FC_SLANT, FC_SLANT_ITALIC);
-    italic_ = load_variant();
+    variants_[ITALIC] = load_variant();
   }
   {
     ScopedFontAttribute<int> bold(pattern_.get(), FC_WEIGHT, FC_WEIGHT_BOLD);
     ScopedFontAttribute<int> italic(pattern_.get(), FC_SLANT, FC_SLANT_ITALIC);
-    bold_italic_ = load_variant();
+    variants_[BOLD | ITALIC] = load_variant();
   }
   // We assume metrics are the same for all variants.
-  metrics_.reset(new Metrics(plain_->font(), display_));
+  metrics_ = variants_[PLAIN]->Measure();
 }
 
-FontSet::Variant::Variant(FcPattern* pattern, Display* display, int screen)
-    : pattern_(FcPatternDuplicate(pattern), FcPatternDestroy),
-      font_(nullptr, {display}),
-      set(nullptr, &FcFontSetDestroy) {
-  auto fail = [pattern] {
-    fprintf(stderr, "mt: failed to load font %s\n", FcNameUnparse(pattern));
-    exit(1);
-  };
-  if (pattern_ == nullptr) fail();
-  FcConfigSubstitute(NULL, pattern_.get(), FcMatchPattern);
-  XftDefaultSubstitute(display, screen, pattern_.get());
-  FcResult unused;
-  FcPattern* match = FcFontMatch(NULL, pattern_.get(), &unused);
-  if (match == nullptr) fail();
-  font_.reset(XftFontOpenPattern(display, match));
-  if (font_ == nullptr) fail();
+MTFont::Glyph MTFont::FindGlyph(uint32_t rune, Style style) {
+  return variants_[style]->FindGlyph(rune);
 }
-
-static int DivCeiling(int n, int d) { return (n + d - 1) / d; }
-
-FontSet::Metrics::Metrics(XftFont* font, Display* display) {
-  FcPatternGetDouble(font->pattern, FC_PIXEL_SIZE, 0, &size);
-  height = font->ascent + font->descent;
-  ascent = font->ascent;
-  // We take font width as the average of these characters.
-  static char ascii_printable[] =
-      " !\"#$%&'()*+,-./0123456789:;<=>?"
-      "@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_"
-      "`abcdefghijklmnopqrstuvwxyz{|}~";
-  XGlyphInfo extents;
-  XftTextExtentsUtf8(display, font, (const FcChar8*)ascii_printable,
-                     strlen(ascii_printable), &extents);
-  width = DivCeiling(extents.xOff, strlen(ascii_printable));
-}
-

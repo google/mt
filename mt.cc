@@ -14,10 +14,8 @@
 #include <cwchar>
 
 extern "C" {
-#include <X11/Xft/Xft.h>
 #include <X11/cursorfont.h>
 #include <fcntl.h>
-#include <fontconfig/fontconfig.h>
 #include <libgen.h>
 #include <pwd.h>
 #include <sys/ioctl.h>
@@ -2347,8 +2345,7 @@ void zoom(const Arg *arg) {
 }
 
 void zoomabs(const Arg *arg) {
-  xunloadfonts();
-  xloadfonts(arg->f);
+  xsetfontsize(arg->f);
   cresize(0, 0);
   ttyresize();
   redraw();
