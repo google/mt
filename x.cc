@@ -878,8 +878,23 @@ void xinit(void) {
       }
     }
   }
-  xw.xic = XCreateIC(xw.xim, XNInputStyle, XIMPreeditNothing | XIMStatusNothing,
-                     XNClientWindow, xw.win, XNFocusWindow, xw.win, NULL);
+
+  XVaNestedList p_list;
+  XPoint spot = {0, 0};
+  char **missing;
+  int count;
+  char *def_string;
+  XFontSet fs = XCreateFontSet(xw.dpy, "*", &missing, &count, &def_string);
+  p_list = XVaCreateNestedList(0,
+          XNSpotLocation, &spot,
+          XNFontSet, fs,
+          (void *)0);
+
+  xw.xic = XCreateIC(xw.xim, XNInputStyle, XIMPreeditPosition | XIMStatusNothing,
+                     XNClientWindow, xw.win, XNFocusWindow, xw.win, XNPreeditAttributes, p_list, NULL);
+  if (xw.xic == NULL)
+    xw.xic = XCreateIC(xw.xim, XNInputStyle, XIMPreeditNothing | XIMStatusNothing,
+                       XNClientWindow, xw.win, XNFocusWindow, xw.win, NULL);
   if (xw.xic == NULL)
     die("XCreateIC failed. Could not obtain input method.\n");
 
@@ -1181,6 +1196,22 @@ void xdrawglyph(MTGlyph g, int x, int y) {
   xdrawglyphfontspecs(&spec, g, numspecs, x, y);
 }
 
+void update_xic_spot(int x, int y)
+{
+    XPoint spot;
+    XVaNestedList list;
+    if(xw.xic) {
+         spot.x = x;
+         spot.y = y;
+         list = XVaCreateNestedList(0, XNSpotLocation, &spot, 
+                   XNForeground, 0,
+                   XNBackground, 0,
+                 (void *)0);
+         XSetICValues(xw.xic, XNPreeditAttributes, list, NULL);
+         XFree(list);
+    }
+}
+
 void xdrawcursor(void) {
   static int oldx = 0, oldy = 0;
   int curx;
@@ -1269,6 +1300,7 @@ void xdrawcursor(void) {
                 borderpx + (term.c.y + 1) * win.ch - 1, win.cw, 1);
   }
   oldx = curx, oldy = term.c.y;
+  update_xic_spot(borderpx + curx * win.cw,  borderpx + (term.c.y + 1) * win.ch);
 }
 
 void xsetenv(void) {
