@@ -2,7 +2,7 @@ cmake_minimum_required (VERSION 3.5)
 project (mt CXX)
 
 # FIXME: clean up signed/unsigned comparisons and enable the warning.
-add_compile_options(-std=c++11 -pedantic -Wall -Werror -Wno-sign-compare)
+add_compile_options(-std=c++11 -Wall -Werror -Wno-sign-compare)
 add_definitions(-DVERSION=\"0.1\" -D_XOPEN_SOURCE=600)
 
 find_package(X11 REQUIRED)
@@ -16,6 +16,9 @@ link_directories(${FC_LBIRARY_DIRS} ${FT_LIBRARY_DIRS})
 add_compile_options(${FC_CFLAGS} ${FT_CFLAGS})
 
 add_executable(mt mt.cc arg.h config.h mt.h x.h x.cc)
-target_link_libraries(mt -lm -lrt -lutil
+target_link_libraries(mt -lm -lutil
                       ${X11_LIBRARIES} ${X11_Xft_LIB}
                       ${FC_LIBRARIES} ${FT_LIBRARIES})
+if (${CMAKE_SYSTEM_NAME} MATCHES "Linux")
+  target_link_libraries(mt -lrt)
+endif()
